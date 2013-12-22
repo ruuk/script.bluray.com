@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<window>
+	<coordinates>
+		<system>1</system>
+		<posx>0</posx>
+		<posy>0</posy>
+	</coordinates>
+	<controls>
+		<control type="group">
+			<posx>880</posx>
+			<posy>460</posy>
+			<control type="image">
+				<posx>0</posx>
+				<posy>0</posy>
+				<width>160</width>
+				<height>160</height>
+				<texture>script-bluray-com-loading_bg.png</texture>
+			</control>
+			<control type="image">
+				<posx>16</posx>
+				<posy>16</posy>
+				<width>128</width>
+				<height>128</height>
+				<texture>script-bluray-com-loading.gif</texture>
+			</control>
+		</control>
+		<control type="image" id="150">
+			<posx>0</posx>
+			<posy>0</posy>
+			<width>1920</width>
+			<height>1080</height>
+			<texture></texture>
+			<aspectratio>keep</aspectratio>
+		</control>
+	</controls>
+</window>

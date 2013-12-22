@@ -1,0 +1,250 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<window>
+	<defaultcontrol>200</defaultcontrol>
+	<coordinates>
+		<system>1</system>
+		<posx>0</posx>
+		<posy>0</posy>
+	</coordinates>
+	<controls>
+		<control type="button" id="350">
+			<posx>0</posx>
+			<posy>-100</posy>
+			<width>10</width>
+			<height>10</height>
+			<onfocus>previousmenu</onfocus>
+		</control>
+		<control type="group">
+			<posx>0</posx>
+			<posy>0</posy>
+			<control type="image">
+				<posx>0</posx>
+				<posy>130</posy>
+				<width>1920</width>
+				<height>950</height>
+				<texture>script-bluray-com-white_square.png</texture>
+				<colordiffuse>FFB8C0D0</colordiffuse>
+			</control>
+		</control>
+		<control type="group" id="149">
+			<posx>880</posx>
+			<posy>460</posy>
+			<control type="image">
+				<posx>0</posx>
+				<posy>0</posy>
+				<width>160</width>
+				<height>160</height>
+				<texture>script-bluray-com-loading_bg.png</texture>
+			</control>
+			<control type="image">
+				<posx>16</posx>
+				<posy>16</posy>
+				<width>128</width>
+				<height>128</height>
+				<texture>script-bluray-com-loading.gif</texture>
+			</control>
+		</control>
+		<control type="group" id="200">
+			<defaultcontrol>101</defaultcontrol>
+			<control type="list" id="101">
+				<posx>0</posx>
+				<posy>130</posy>
+				<width>1920</width>
+				<height>950</height>
+				<scrolltime>200</scrolltime>
+				<onright>350</onright>
+				<onleft>350</onleft>
+				<itemlayout height="130">
+					<control type="image">
+						<posx>30</posx>
+						<posy>6</posy>
+						<width>118</width>
+						<height>118</height>
+						<aspectratio align="left'">keep</aspectratio>
+						<texture>$INFO[ListItem.Icon]</texture>
+					</control>
+					<control type="image">
+						<posx>118</posx>
+						<posy>102</posy>
+						<width>27</width>
+						<height>18</height>
+						<texture>$INFO[ListItem.Property(flag)]</texture>
+					</control>
+					<control type="image">
+						<posx>1780</posx>
+						<posy>15</posy>
+						<width>110</width>
+						<height>20</height>
+						<texture>$INFO[ListItem.Property(ratingImage)]</texture>
+					</control>
+					<control type="label">
+						<posx>158</posx>
+						<posy>0</posy>
+						<width>1450</width>
+						<height>51</height>
+						<font>font13</font>
+						<aligny>center</aligny>
+						<textcolor>FF000000</textcolor>
+						<align>left</align>
+						<label>[B]$INFO[ListItem.Label][/B]</label>
+					</control>
+					<control type="textbox">
+						<posx>158</posx>
+						<posy>43</posy>
+						<width>1732</width>
+						<height>55</height>
+						<font>font10</font>
+						<textcolor>FF000000</textcolor>
+						<align>left</align>
+						<label>[B]$INFO[ListItem.Property(description)][/B]</label>
+					</control>
+					<control type="label">
+						<posx>158</posx>
+						<posy>98</posy>
+						<width>1400</width>
+						<height>20</height>
+						<font>font10</font>
+						<textcolor>FF505050</textcolor>
+						<align>left</align>
+						<label>$INFO[ListItem.Property(info)]</label>
+					</control>
+					<control type="label">
+						<posx>1890</posx>
+						<posy>98</posy>
+						<width>550</width>
+						<height>20</height>
+						<font>font10</font>
+						<textcolor>FF505050</textcolor>
+						<align>right</align>
+						<label>$INFO[ListItem.Property(genre)]</label>
+					</control>
+					<control type="label">
+						<posx>1770</posx>
+						<posy>10</posy>
+						<width>500</width>
+						<height>20</height>
+						<font>font10</font>
+						<textcolor>FF505050</textcolor>
+						<align>right</align>
+						<label>$INFO[ListItem.Property(rating)]</label>
+					</control>
+					<control type="image">
+						<posx>0</posx>
+						<posy>0</posy>
+						<width>1920</width>
+						<height>2</height>
+						<texture>script-bluray-com-white_square.png</texture>
+						<colordiffuse>FF000000</colordiffuse>
+					</control>
+					<control type="image">
+						<posx>0</posx>
+						<posy>130</posy>
+						<width>1920</width>
+						<height>2</height>
+						<texture>script-bluray-com-white_square.png</texture>
+						<colordiffuse>FF000000</colordiffuse>
+					</control>
+				</itemlayout>
+				<focusedlayout height="130">
+					<control type="image">
+						<posx>0</posx>
+						<posy>0</posy>
+						<width>1920</width>
+						<height>130</height>
+						<texture>script-bluray-com-white_square.png</texture>
+						<colordiffuse>FF0060B0</colordiffuse>
+					</control>
+					<control type="image">
+						<posx>30</posx>
+						<posy>6</posy>
+						<width>118</width>
+						<height>118</height>
+						<aspectratio align="left'">keep</aspectratio>
+						<texture>$INFO[ListItem.Icon]</texture>
+					</control>
+					<control type="image">
+						<posx>118</posx>
+						<posy>102</posy>
+						<width>27</width>
+						<height>18</height>
+						<texture>$INFO[ListItem.Property(flag)]</texture>
+					</control>
+					<control type="image">
+						<posx>1780</posx>
+						<posy>15</posy>
+						<width>110</width>
+						<height>20</height>
+						<texture>$INFO[ListItem.Property(ratingImage)]</texture>
+					</control>
+					<control type="label">
+						<posx>158</posx>
+						<posy>0</posy>
+						<width>1450</width>
+						<height>51</height>
+						<font>font13</font>
+						<aligny>center</aligny>
+						<textcolor>FFFFFFFF</textcolor>
+						<align>left</align>
+						<label>[B]$INFO[ListItem.Label][/B]</label>
+					</control>
+					<control type="textbox">
+						<posx>158</posx>
+						<posy>43</posy>
+						<width>1732</width>
+						<height>55</height>
+						<font>font10</font>
+						<textcolor>FFFFFFFF</textcolor>
+						<align>left</align>
+						<label>[B]$INFO[ListItem.Property(description)][/B]</label>
+					</control>
+					<control type="label">
+						<posx>158</posx>
+						<posy>98</posy>
+						<width>1400</width>
+						<height>20</height>
+						<font>font10</font>
+						<textcolor>FFB0B0B0</textcolor>
+						<align>left</align>
+						<label>$INFO[ListItem.Property(info)]</label>
+					</control>
+					<control type="label">
+						<posx>1890</posx>
+						<posy>98</posy>
+						<width>550</width>
+						<height>20</height>
+						<font>font10</font>
+						<textcolor>FFB0B0B0</textcolor>
+						<align>right</align>
+						<label>$INFO[ListItem.Property(genre)]</label>
+					</control>
+					<control type="label">
+						<posx>1770</posx>
+						<posy>10</posy>
+						<width>500</width>
+						<height>20</height>
+						<font>font10</font>
+						<textcolor>FFB0B0B0</textcolor>
+						<align>right</align>
+						<label>$INFO[ListItem.Property(rating)]</label>
+					</control>
+					<control type="image">
+						<posx>0</posx>
+						<posy>0</posy>
+						<width>1920</width>
+						<height>2</height>
+						<texture>script-bluray-com-white_square.png</texture>
+						<colordiffuse>FF000000</colordiffuse>
+					</control>
+					<control type="image">
+						<posx>0</posx>
+						<posy>130</posy>
+						<width>1920</width>
+						<height>2</height>
+						<texture>script-bluray-com-white_square.png</texture>
+						<colordiffuse>FF000000</colordiffuse>
+					</control>
+				</focusedlayout>
+			</control>
+		</control>
+	</controls>
+</window>
