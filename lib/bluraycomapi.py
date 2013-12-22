@@ -1,3 +1,8 @@
+import sys
+if sys.version < '2.7.3': #If crappy html.parser, use internal version. Using internal version on ATV2 crashes as of XBMC 12.2, so that's why we test version
+	print 'Blu-ray.com: Using internal HTMLParser'
+	import HTMLParser # @UnusedImport
+	
 import re, requests, bs4, urllib # @UnresolvedImport
 
 class ResultItem:
