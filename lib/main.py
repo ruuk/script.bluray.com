@@ -66,10 +66,14 @@ class BluRayReviews(xbmcgui.WindowXMLDialog):
 		self.loading = self.getControl(149)
 		self.showReviews()
 	
-	def showReviews(self):
+	def refresh(self,page=0):
+		self.reviewList.reset()
+		self.showReviews(page=page)
+		
+	def showReviews(self,page=0):
 		self.loading.setVisible(True)
 		try:
-			items = []
+			paging = (None,None)
 			if self.search:
 				results = API.search(self.search)
 				if not results:
@@ -78,7 +82,13 @@ class BluRayReviews(xbmcgui.WindowXMLDialog):
 			elif self.mode == 'RELEASES':
 				results = API.getReleases()
 			else:
-				results = API.getReviews()
+				results, paging = API.getReviews(page)
+			items = []
+			if paging[0]:
+				item = xbmcgui.ListItem(label='Previous Page',iconImage='')
+				item.setProperty('paging','prev')
+				item.setProperty('page',paging[0])
+				items.append(item)
 				
 			for i in results:
 				item = xbmcgui.ListItem(label=i.title,iconImage=i.icon)
@@ -91,6 +101,13 @@ class BluRayReviews(xbmcgui.WindowXMLDialog):
 				item.setProperty('url',i.url)
 				item.setProperty('flag',i.flagImage)
 				items.append(item)
+				
+			if paging[1]:
+				item = xbmcgui.ListItem(label='Next Page',iconImage='')
+				item.setProperty('paging','next')
+				item.setProperty('page',paging[1])
+				items.append(item)
+				
 			self.reviewList.addItems(items)
 			self.setFocus(self.reviewList)
 		finally:
@@ -100,7 +117,10 @@ class BluRayReviews(xbmcgui.WindowXMLDialog):
 		if controlID == 101:
 			item = self.reviewList.getSelectedItem()
 			if not item: return
-			openWindow(BluRayReview, 'bluray-com-review.xml',url=item.getProperty('url'))
+			if item.getProperty('paging'):
+				self.refresh(page=item.getProperty('page'))
+			else:
+				openWindow(BluRayReview, 'bluray-com-review.xml',url=item.getProperty('url'))
 	
 class BluRayReview(BaseWindowDialog):
 	def __init__(self,*args,**kwargs):

@@ -59,6 +59,8 @@ class ReviewsResult(ResultItem):
 		self.url = ''
 		self.genre = ''
 		self.flagImage = ''
+		self.previous = None
+		self.next = None
 		ResultItem.__init__(self, soupData)
 		
 	def processSoupData(self,soupData):
@@ -234,6 +236,15 @@ class BlurayComAPI:
 	def getCategories(self):
 		return [('Reviews','','reviews'),('Releases','','releases'),('Search','','search')]
 	
+	def getPaging(self,soupData):
+		prevPage = None
+		nextPage = None
+		next_ = soupData.find('a',{'data-icon':'arrow-r'})
+		prev = soupData.find('a',{'data-icon':'arrow-l'})
+		if next_: nextPage = next_.get('href','').rsplit('=',1)[-1] or None
+		if prev: prevPage = prev.get('href','').rsplit('=',1)[-1] or None
+		return (prevPage,nextPage)
+		
 	def getReleases(self):
 		items = []
 		soup = self.url2Soup(self.releasesURL)
@@ -242,12 +253,15 @@ class BlurayComAPI:
 		return items
 	
 	def getReviews(self,page=''):
-		if page: page = '?' + self.pageARG % page
+		if page:
+			page = '?' + self.pageARG % page
+		else:
+			page = ''
 		soup = self.url2Soup(self.reviewsURL + page)
 		items = []
 		for i in soup.findAll('li',{'data-role':lambda x: not x}):
 			items.append(ReviewsResult(i))
-		return items
+		return (items,self.getPaging(soup))
 	
 	def getReview(self,url):
 		req = requests.get(url)
