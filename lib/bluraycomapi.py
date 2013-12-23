@@ -101,15 +101,11 @@ class ReviewsResultJSON(ReviewsResult):
 class ReleasesResult(ReviewsResult):
 	def processSoupData(self,soupData):
 		self.title = soupData.find('h3').getText().strip()
-		#flagImg = soupData.find('img',{'src':lambda x: 'flag' in x})
-		#if flagImg: self.flagImage = flagImg.get('src','')
 		images = soupData.findAll('img')
 		self.icon = images[0].get('src')
-		#self.rating = images[-1].get('alt')
-		#self.ratingImage = images[-1].get('src')
 		data = soupData.findAll('p',text=True)
 		try:
-			self.info = data[-3].text
+			self.info = data[-3].text #Will probably never give anything
 		except:
 			pass
 		try:
@@ -117,6 +113,24 @@ class ReleasesResult(ReviewsResult):
 		except:
 			pass
 		self.info = data[-1].text
+		self.url = soupData.find('a').get('href')
+		self.ID = self.url.strip('/').rsplit('/')[-1]
+		
+class DealsResult(ReviewsResult):
+	def processSoupData(self,soupData):
+		self.title = soupData.find('h3').getText().strip()
+		price = []
+		for span in soupData.find('span').findAll('span'):
+			color = span.get('style','').split('#',1)[-1].split(';',1)[0].upper()
+			price.append((span.getText(strip=True),color))
+		if len(price) > 2:
+			self.description = '%s (%s)  [COLOR FF%s]%s[/COLOR]' % (price[1][0],price[2][0],price[0][1],price[0][0].upper())
+		else:
+			for p in price: self.description =+ p[0] + '  '
+		
+		images = soupData.findAll('img')
+		self.icon = images[0].get('src')
+			
 		self.url = soupData.find('a').get('href')
 		self.ID = self.url.strip('/').rsplit('/')[-1]
 
@@ -223,6 +237,7 @@ def removeColorTags(text):
 class BlurayComAPI:
 	reviewsURL = 'http://m.blu-ray.com/movies/reviews.php'
 	releasesURL = 'http://m.blu-ray.com/movies'
+	dealsURL = 'http://m.blu-ray.com/deals'
 	searchURL = 'http://m.blu-ray.com/quicksearch/search.php?country=ALL&section=bluraymovies&keyword={0}'
 	pageARG = 'page=%s'
 	
@@ -234,7 +249,7 @@ class BlurayComAPI:
 		return bs4.BeautifulSoup(req.text,self.parser)
 	
 	def getCategories(self):
-		return [('Reviews','','reviews'),('Releases','','releases'),('Search','','search')]
+		return [('Reviews','','reviews'),('Releases','','releases'),('Deals','','deals'),('Search','','search')]
 	
 	def getPaging(self,soupData):
 		prevPage = None
@@ -250,6 +265,13 @@ class BlurayComAPI:
 		soup = self.url2Soup(self.releasesURL)
 		for i in soup.findAll('li',{'data-role':lambda x: not x}):
 			items.append(ReleasesResult(i))
+		return items
+	
+	def getDeals(self):
+		items = []
+		soup = self.url2Soup(self.dealsURL)
+		for i in soup.findAll('li',{'data-role':lambda x: not x}):
+			items.append(DealsResult(i))
 		return items
 	
 	def getReviews(self,page=''):

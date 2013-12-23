@@ -46,6 +46,8 @@ class BluRayCategories(xbmcgui.WindowXML):
 				openReviewsWindow()
 			elif item.getProperty('id') == 'releases':
 				openReviewsWindow(mode='RELEASES')
+			elif item.getProperty('id') == 'deals':
+				openReviewsWindow(mode='DEALS')
 			elif item.getProperty('id') == 'search':
 				key = xbmc.Keyboard(heading='Enter Terms')
 				key.doModal()
@@ -81,6 +83,8 @@ class BluRayReviews(xbmcgui.WindowXMLDialog):
 					return
 			elif self.mode == 'RELEASES':
 				results = API.getReleases()
+			elif self.mode == 'DEALS':
+				results = API.getDeals()
 			else:
 				results, paging = API.getReviews(page)
 			items = []
