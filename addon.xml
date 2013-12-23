@@ -10,8 +10,8 @@
 	</extension>
 	<extension point="xbmc.addon.metadata">
 		<platform>all</platform>
-		<summary lang="en">Blu-ray.com</summary>
-		<description lang="en">Blu-ray.com</description>
+		<summary lang="en">Blu-ray.com reviews, releases, deals and search.</summary>
+		<description lang="en">Enjoy Blu-ray.com content on your TV. Blu-ray.com provides great reviews with 1080p screenshots, which are nice to preview on your actual TV. You can also browse the latest releases and look for the latest Blu-ray deals. Currently in an exprimental stage is access to collections for registerd users, with the ability to mark titles watched.</description>
 		<license>GNU GENERAL PUBLIC LICENSE. Version 2, June 1991</license>
 		<forum></forum>
 		<source>http://github.com/ruuk/script.bluray.com</source>

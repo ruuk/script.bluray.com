@@ -1,0 +1,78 @@
+# XBMC Media Center language file
+msgid ""
+msgstr ""
+"Project-Id-Version: XBMC-Addons\n"
+"Report-Msgid-Bugs-To: alanwww1@xbmc.org\n"
+"POT-Creation-Date: 2013-12-12 22:56+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: en\n"
+"Plural-Forms: nplurals=2; plural=(n != 1)\n"
+
+msgctxt "#32001"
+msgid "Reviews"
+msgstr ""
+
+msgctxt "#32002"
+msgid "Releases"
+msgstr ""
+
+msgctxt "#32003"
+msgid "Deals"
+msgstr ""
+
+msgctxt "#32004"
+msgid "Search"
+msgstr ""
+
+msgctxt "#32005"
+msgid "Previous Page"
+msgstr ""
+
+msgctxt "#32006"
+msgid "Next Page"
+msgstr ""
+
+msgctxt "#32007"
+msgid "Enter Terms"
+msgstr ""
+
+msgctxt "#32008"
+msgid "No Results"
+msgstr ""
+
+msgctxt "#32009"
+msgid "Search query provided no results."
+msgstr ""
+
+msgctxt "#32010"
+msgid "Collection"
+msgstr ""
+
+msgctxt "#32011"
+msgid "Watched"
+msgstr ""
+
+msgctxt "#32012"
+msgid "Yes"
+msgstr ""
+
+msgctxt "#32013"
+msgid "Username"
+msgstr ""
+
+msgctxt "#32014"
+msgid "Password"
+msgstr ""
+
+msgctxt "#32015"
+msgid "Other Editions"
+msgstr ""
+
+msgctxt "#32016"
+msgid "Similar Titles"
+msgstr ""

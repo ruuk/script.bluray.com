@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <window>
+	<onload>SetProperty(loading,1)</onload>
 	<defaultcontrol>200</defaultcontrol>
 	<coordinates>
 		<system>1</system>
@@ -26,24 +27,6 @@
 				<colordiffuse>FFB8C0D0</colordiffuse>
 			</control>
 		</control>
-		<control type="group" id="149">
-			<posx>880</posx>
-			<posy>460</posy>
-			<control type="image">
-				<posx>0</posx>
-				<posy>0</posy>
-				<width>160</width>
-				<height>160</height>
-				<texture>script-bluray-com-loading_bg.png</texture>
-			</control>
-			<control type="image">
-				<posx>16</posx>
-				<posy>16</posy>
-				<width>128</width>
-				<height>128</height>
-				<texture>script-bluray-com-loading.gif</texture>
-			</control>
-		</control>
 		<control type="group" id="200">
 			<defaultcontrol>101</defaultcontrol>
 			<control type="list" id="101">
@@ -55,7 +38,29 @@
 				<onright>350</onright>
 				<onleft>350</onleft>
 				<itemlayout height="130">
-				<control type="group">
+					<control type="group">
+						<visible>StringCompare(ListItem.Property(paging),section)</visible>
+						<control type="image">
+							<posx>0</posx>
+							<posy>0</posy>
+							<width>1920</width>
+							<height>130</height>
+							<texture>script-bluray-com-white_square.png</texture>
+							<colordiffuse>FF40A0F0</colordiffuse>
+						</control>
+						<control type="label">
+							<posx>960</posx>
+							<posy>0</posy>
+							<width>1920</width>
+							<height>130</height>
+							<font>font30</font>
+							<aligny>center</aligny>
+							<textcolor>FFFFFFFF</textcolor>
+							<align>center</align>
+							<label>[UPPERCASE][B]$INFO[ListItem.Label][/B][/UPPERCASE]</label>
+						</control>
+					</control>
+					<control type="group">
 						<visible>StringCompare(ListItem.Property(paging),prev)</visible>
 						<control type="label">
 							<posx>130</posx>
@@ -172,22 +177,22 @@
 							<align>right</align>
 							<label>$INFO[ListItem.Property(rating)]</label>
 						</control>
-						<control type="image">
-							<posx>0</posx>
-							<posy>0</posy>
-							<width>1920</width>
-							<height>2</height>
-							<texture>script-bluray-com-white_square.png</texture>
-							<colordiffuse>FF000000</colordiffuse>
-						</control>
-						<control type="image">
-							<posx>0</posx>
-							<posy>130</posy>
-							<width>1920</width>
-							<height>2</height>
-							<texture>script-bluray-com-white_square.png</texture>
-							<colordiffuse>FF000000</colordiffuse>
-						</control>
+					</control>
+					<control type="image">
+						<posx>0</posx>
+						<posy>0</posy>
+						<width>1920</width>
+						<height>2</height>
+						<texture>script-bluray-com-white_square.png</texture>
+						<colordiffuse>FF000000</colordiffuse>
+					</control>
+					<control type="image">
+						<posx>0</posx>
+						<posy>130</posy>
+						<width>1920</width>
+						<height>2</height>
+						<texture>script-bluray-com-white_square.png</texture>
+						<colordiffuse>FF000000</colordiffuse>
 					</control>
 				</itemlayout>
 				<focusedlayout height="130">
@@ -214,6 +219,20 @@
 						<height>2</height>
 						<texture>script-bluray-com-white_square.png</texture>
 						<colordiffuse>FF000000</colordiffuse>
+					</control>
+					<control type="group">
+						<visible>StringCompare(ListItem.Property(paging),section)</visible>
+						<control type="label">
+							<posx>960</posx>
+							<posy>0</posy>
+							<width>1920</width>
+							<height>130</height>
+							<font>font30</font>
+							<aligny>center</aligny>
+							<textcolor>FFFFFFFF</textcolor>
+							<align>center</align>
+							<label>[UPPERCASE][B]$INFO[ListItem.Label][/B][/UPPERCASE]</label>
+						</control>
 					</control>
 					<control type="group">
 						<visible>StringCompare(ListItem.Property(paging),prev)</visible>
@@ -334,6 +353,25 @@
 						</control>
 					</control>
 				</focusedlayout>
+			</control>
+		</control>
+		<control type="group" id="149">
+			<visible>StringCompare(Window.Property(loading),1)</visible>
+			<posx>880</posx>
+			<posy>460</posy>
+			<control type="image">
+				<posx>0</posx>
+				<posy>0</posy>
+				<width>160</width>
+				<height>160</height>
+				<texture>script-bluray-com-loading_bg.png</texture>
+			</control>
+			<control type="image">
+				<posx>16</posx>
+				<posy>16</posy>
+				<width>128</width>
+				<height>128</height>
+				<texture>script-bluray-com-loading.gif</texture>
 			</control>
 		</control>
 	</controls>

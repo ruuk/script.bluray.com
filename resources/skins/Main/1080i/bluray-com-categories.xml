@@ -31,18 +31,18 @@
 		<control type="group" id="200">
 			<defaultcontrol>100</defaultcontrol>
 			<control type="list" id="100">
-				<posx>320</posx>
+				<posx>85</posx>
 				<posy>30</posy>
-				<width>1100</width>
+				<width>1750</width>
 				<height>100</height>
 				<scrolltime>200</scrolltime>
 				 <orientation>horizontal</orientation>
 		         <focusposition>2</focusposition>
-				<itemlayout width="260">
+				<itemlayout width="350">
 					<control type="label">
-						<posx>130</posx>
+						<posx>175</posx>
 						<posy>0</posy>
-						<width>260</width>
+						<width>350</width>
 						<height>100</height>
 						<font>font30</font>
 						<aligny>center</aligny>
@@ -51,13 +51,13 @@
 						<label>[B][UPPERCASE]$INFO[ListItem.Label][/UPPERCASE][/B]</label>
 					</control>
 				</itemlayout>
-				<focusedlayout width="260">
+				<focusedlayout width="350">
 					<control type="group">
 						<visible>StringCompare(Window(10000).Property(script.bluray.com-reviews_open),1)</visible>
 						<control type="image">
 							<posx>0</posx>
 							<posy>0</posy>
-							<width>260</width>
+							<width>350</width>
 							<height>100</height>
 							<texture border="25">script-bluray-com-white_square_round_top.png</texture>
 							<colordiffuse>FFB8C0D0</colordiffuse>
@@ -65,16 +65,16 @@
 						<control type="image">
 							<posx>0</posx>
 							<posy>85</posy>
-							<width>260</width>
+							<width>350</width>
 							<height>15</height>
 							<texture>script-bluray-com-white_fade_up.png</texture>
 							<colordiffuse>FF000000</colordiffuse>
 						</control>
 					</control>
 					<control type="label">
-						<posx>130</posx>
+						<posx>175</posx>
 						<posy>0</posy>
-						<width>260</width>
+						<width>350</width>
 						<height>100</height>
 						<font>font30</font>
 						<aligny>center</aligny>

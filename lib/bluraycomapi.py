@@ -1,10 +1,33 @@
-import sys
+import sys, hashlib, time
 if sys.version < '2.7.3': #If crappy html.parser, use internal version. Using internal version on ATV2 crashes as of XBMC 12.2, so that's why we test version
 	print 'Blu-ray.com: Using internal HTMLParser'
 	import HTMLParser # @UnusedImport
 	
 import re, requests, bs4, urllib # @UnresolvedImport
 
+def LOG(msg):
+	print msg
+	
+TR = {	'reviews':'Reviews',
+		'releases':'Releases',
+		'deals':'Deals',
+		'search':'Search',
+		'collection':'Collection',
+		'watched':'Watched',
+		'yes':'Yes'
+}
+
+def minsToDuration(mins):
+	try:
+		mins = int(mins)
+	except:
+		return str(mins)
+	hrs = mins/60
+	mins = mins%60
+	hrsd = hrs > 1 and 'hrs' or 'hr'
+	minsd = mins > 1 and 'mins' or 'min'
+	return '%d %s %d %s' % (hrs,hrsd,mins,minsd)
+	
 class ResultItem:
 	_resultType = 'None'
 	_hr = '[COLOR FF606060]%s[/COLOR]' % ('_' * 200)
@@ -45,13 +68,17 @@ class ResultItem:
 				tag.string = i.get('alt','')
 				i.replaceWith(tag)
 			h3r = soup.new_tag('p')
-			h3r.string = '[CR][COLOR FF0080D0][B]%s[/B][/COLOR][CR]' % h3.getText()
+			h3r.string = '[CR][COLOR FF0080D0][B]%s[/B][/COLOR][CR]' % h3.getText(strip=True)
 			h3.replaceWith(h3r)
+			
+	def cleanWhitespace(self,text):
+		return re.sub('\[CR\]\s+','[CR]',text).strip()
 			
 class ReviewsResult(ResultItem):
 	_resultType = 'ReviewsResult'
 	
 	def __init__(self,soupData):
+		self._section = None
 		self.description = ''
 		self.rating = ''
 		self.ratingImage = ''
@@ -75,11 +102,11 @@ class ReviewsResult(ResultItem):
 		try:
 			self.info = data[-3].text
 		except:
-			print 'INFO ERROR'
+			LOG('INFO ERROR')
 		try:
 			self.description = data[-2].text
 		except:
-			print 'NO DESCRIPTION'
+			LOG('NO DESCRIPTION')
 		self.genre = data[-1].text
 		self.url = soupData.find('a').get('href')
 		self.ID = self.url.strip('/').rsplit('/')[-1]
@@ -134,6 +161,85 @@ class DealsResult(ReviewsResult):
 		self.url = soupData.find('a').get('href')
 		self.ID = self.url.strip('/').rsplit('/')[-1]
 
+class CollectionResult(ReviewsResult):
+	infoTags = ('runtime','studio','year','releasetimestamp')
+	def __init__(self,soupData,categoryid):
+		self.categoryid = categoryid
+		self.sortTitle = ''
+		self.json = {}
+		ReviewsResult.__init__(self, soupData)
+		
+	'''
+	rating: 8.6842
+	dtadded: 1387809844
+	year: 1993
+	pid: 59530
+	gpid: 159245
+	gtin: 00025192180279
+	coverurl0: http://images2.static-bluray.com/movies/covers/59530_medium.jpg
+	watched: 1
+	releasetimestamp: 1366689600
+	ctid: 1
+	countrycode: US
+	title: Jurassic Park 3D
+	titlesort: Jurassic Park 3D
+	3d: 1
+	studio: Universal Studios
+	vidresid: 278
+	genreids: 1,2,21
+	movieid: 20587
+	url: http://www.blu-ray.com/movies/Jurassic-Park-3D-Blu-ray/59530/
+	studioid: 8
+	runtime: 127
+	casingid: 2423
+	dtwatched: 1387165468
+	price: 500
+	pricecomment: Bin
+	exclude: 1
+	'''
+	def processSoupData(self,json):
+		json['categoryid'] = self.categoryid
+		self.json = json
+		self.title = json.get('title')
+		self.icon = json.get('coverurl0')
+		self.url = json.get('url').replace('www','m')
+		rating = json.get('rating')
+		self.sortTitle = json.get('titlesort',self.title) 
+		try:
+			self.ratingImage = 'http://www.blu-ray.com/images/rating/b%s.jpg' % (int(float(rating)) or '0')
+		except:
+			pass
+		self.info = json.get('year','') + ' | ' + json.get('reldate','')
+		try:
+			self.rating = 'Overall: %.1f of 5' % (round(round(float(rating)/2,1)*2)/2)
+		except:
+			pass
+		self.info = ''
+		infos = []
+		for tag in self.infoTags:
+			data = json.get(tag)
+			if not data: continue
+			if tag == 'runtime':
+				data = minsToDuration(data)
+			elif tag == 'releasetimestamp':
+				try:
+					data = int(data)
+				except:
+					continue
+				data = time.strftime('%b %d, %Y',time.gmtime(data))
+			infos.append(data)
+		self.info = ' | '.join(infos)
+		try:
+			watched = int(json.get('dtwatched'))
+			self.description = ('%s: ' % TR['watched']) + time.strftime('%b %d, %Y',time.localtime(watched))
+		except (TypeError, ValueError):
+			self.description = json.get('watched') and ('%s: %s' % (TR['watched'], TR['yes'])) or ''
+		self.description += '[CR]' + json.get('comment','')
+		self.genre = ''
+		
+	def refresh(self):
+		self.processSoupData(self.json)
+		
 class Review(ReviewsResult):
 	_resultType = 'Review'
 	def __init__(self,soupData):
@@ -148,12 +254,14 @@ class Review(ReviewsResult):
 		self.historyGraphs = []
 		self.otherEditions = []
 		self.similarTitles = []
+		self.subheading1 = ''
+		self.subheading2 = ''
 		ReviewsResult.__init__(self, soupData)
 		
 	def processSoupData(self,soupData):
 		flagImg = soupData.find('img',{'src':lambda x: 'flags' in x})
 		if flagImg: self.flagImage = flagImg.get('src','')
-			
+		
 		for i in soupData.findAll('img',{'id':'reviewScreenShot'}):
 			src = i.get('src','')
 			p1080 = src.replace('.jpg','_1080p.jpg')
@@ -165,23 +273,30 @@ class Review(ReviewsResult):
 			
 		self.title = soupData.find('title').getText(strip=True)
 		
+		subheadings = soupData.findAll('span',{'class':'subheading'})
+		if subheadings:
+			self.subheading1 = subheadings[0].getText().strip()
+			if len(subheadings) > 1: self.subheading2 = subheadings[1].getText().strip()
+		
 		coverImg = soupData.find('img',{'id':'frontimage_overlay'})
 		if coverImg: self.coverImage = coverImg.get('src','')
 		
+		for p in soupData.findAll('p'):
+			p.replaceWith(p.getText() + '[CR]')
 		reviewSoup = soupData.find('div',{'id':'reviewItemContent'})
 		
 		if reviewSoup:
 			self.convertHeaders(soupData, reviewSoup)
 			self.convertTable(soupData, reviewSoup.find('table'))
-			self.review = reviewSoup.getText(strip=True)
+			self.review = self.cleanWhitespace(reviewSoup.getText())
 			
 		price_rating = soupData.findAll('div',{'class','content2'})
 		self.convertHeaders(soupData, price_rating[0])
-		self.price = price_rating[0].getText()
+		self.price = self.cleanWhitespace(price_rating[0].getText())
 		if len(price_rating) > 1:
 			self.convertHeaders(soupData, price_rating[1])
 			self.convertTable(soupData, price_rating[1].find('table'))
-			self.blurayRating = price_rating[1].getText()
+			self.blurayRating = self.cleanWhitespace(price_rating[1].getText())
 			
 		sections = soupData.findAll('div',{'data-role':'collapsible'})
 		for section in sections:
@@ -199,7 +314,7 @@ class Review(ReviewsResult):
 				self.processSimilarTitles(soupData, section)
 			elif 'review' in sectionName and not self.review:
 				self.convertHeaders(soupData, section)
-				self.review = section.getText(strip=True)
+				self.review = section.getText()
 				
 		if self.review.startswith('[CR]'): self.review = self.review[4:]
 		if self.overview.startswith('[CR]'): self.overview = self.overview[4:]
@@ -207,12 +322,12 @@ class Review(ReviewsResult):
 	def processOverview(self,soupData,section):
 		self.convertHeaders(soupData, section)
 		self.convertTable(soupData, section.find('table'),sep=': ')
-		self.overview = section.getText()
+		self.overview = self.cleanWhitespace(section.getText())
 		
 	def processSpecifications(self,soupData,section):
 		self.convertHeaders(soupData, section)
 		self.convertUL(soupData,section.find('ul'))
-		self.specifications = section.getText()
+		self.specifications = self.cleanWhitespace(section.getText())
 		
 	def processHistoryGraphs(self,soupData,section):
 		for i in section.findAll('img'):
@@ -237,19 +352,28 @@ def removeColorTags(text):
 class BlurayComAPI:
 	reviewsURL = 'http://m.blu-ray.com/movies/reviews.php'
 	releasesURL = 'http://m.blu-ray.com/movies'
-	dealsURL = 'http://m.blu-ray.com/deals'
+	dealsURL = 'http://m.blu-ray.com/deals/index.php'
 	searchURL = 'http://m.blu-ray.com/quicksearch/search.php?country=ALL&section=bluraymovies&keyword={0}'
+	apiLoginURL = 'http://m.blu-ray.com/api/userauth.php'
+	collectionURL = 'http://m.blu-ray.com/api/collection.json.php?categoryid={category}&imgsz=1&session={session_id}'
+	updateCollectableURL = 'http://m.blu-ray.com/api/updatecollectable.php'
 	pageARG = 'page=%s'
 	
 	def __init__(self):
 		self.parser = None
+		self.sessionID = ''
+		self.user = ''
+		self.password = ''
 	
 	def url2Soup(self,url):
 		req = requests.get(url)
 		return bs4.BeautifulSoup(req.text,self.parser)
 	
 	def getCategories(self):
-		return [('Reviews','','reviews'),('Releases','','releases'),('Deals','','deals'),('Search','','search')]
+		cats = [(TR['reviews'],'','reviews'),(TR['releases'],'','releases'),(TR['deals'],'','deals'),(TR['search'],'','search')]
+		if self.canLogin():
+			cats.append((TR['collection'],'','collection'))
+		return cats
 	
 	def getPaging(self,soupData):
 		prevPage = None
@@ -263,16 +387,32 @@ class BlurayComAPI:
 	def getReleases(self):
 		items = []
 		soup = self.url2Soup(self.releasesURL)
-		for i in soup.findAll('li',{'data-role':lambda x: not x}):
-			items.append(ReleasesResult(i))
+		section = ''
+		for i in soup.findAll('li'): #,{'data-role':lambda x: not x}):
+			if i.h3:
+				res = ReleasesResult(i)
+				if section:
+					res._section = section
+					section = ''
+				items.append(res)
+			elif i.string:
+				heading = i.string.lower()
+				if 'this' in heading:
+					section = 'THISWEEK'
+				elif 'next' in heading:
+					section = 'NEXTWEEK'
 		return items
 	
-	def getDeals(self):
+	def getDeals(self,page=''):
+		if page:
+			page = '?' + self.pageARG % page
+		else:
+			page = ''
 		items = []
-		soup = self.url2Soup(self.dealsURL)
+		soup = self.url2Soup(self.dealsURL + page)
 		for i in soup.findAll('li',{'data-role':lambda x: not x}):
 			items.append(DealsResult(i))
-		return items
+		return (items,self.getPaging(soup))
 	
 	def getReviews(self,page=''):
 		if page:
@@ -290,8 +430,10 @@ class BlurayComAPI:
 		
 		fixed = ''
 		for line in req.text.splitlines():
+			if not line.strip(): continue
 			new = line.rstrip()
-			if new != line: new += ' '
+			#if new != line: 
+			new += ' '
 			line = new.lstrip()
 			if line != new: line = ' ' + line
 			fixed += line 
@@ -301,6 +443,23 @@ class BlurayComAPI:
 		soup = bs4.BeautifulSoup(fixed,self.parser,from_encoding=req.encoding)
 		return Review(soup)
 	
+	def getCollection(self,category='7'):
+		if not self.apiLogin(): return
+		
+		req = requests.get(self.collectionURL.format(category=category,session_id=self.sessionID))
+		json = req.json()
+		if not 'collection' in json:
+			if not self.apiLogin(force=True): return []
+			req = requests.get(self.collectionURL.format(category=category,session_id=self.sessionID))
+			json = req.json()
+			if not 'collection' in json: return []
+		
+		items = []
+		for i in json['collection']:
+			items.append(CollectionResult(i,category))
+		items.sort(key=lambda i: i.sortTitle)
+		return items
+	
 	def search(self,terms):
 		req = requests.get(self.searchURL.format(urllib.quote(terms)))
 		results = []
@@ -308,4 +467,73 @@ class BlurayComAPI:
 			results.append(ReviewsResultJSON(i))
 		return results
 		
+	def updateCollectable(self,newdata):
+		if not self.apiLogin(): return
+		data = {	'session':       self.sessionID,
+					'productid':     newdata.get('pid','') or '0',
+					'categoryid':    newdata.get('categoryid','') or '0',
+					'typeid':        newdata.get('ctid','') or '0',
+					'dateadded':     newdata.get('dtadded','') or '0',
+					'datewatched':   newdata.get('dtwatched','') or '0',
+					'watched':       newdata.get('watched','') or '0',
+					'description':   newdata.get('comment',''),
+					'price':         newdata.get('price','') or '0',
+					'pricecomment':  newdata.get('pricecomment',''),
+					'exclude':       newdata.get('exclude','') or '0'
+		}
+		'''
+		{u'rating': u'7.45093',
+		u'vidresid': u'2181',
+		u'runtime': u'112',
+		u'movieid': u'33757',
+		u'genreids': u'6,27',
+		u'countrycode': u'US',
+		u'title': u'City Slickers',
+		u'releasetimestamp': u'989294400',
+		u'dtadded': u'1387824662',
+		u'pid': u'10866', 
+		u'watched': u'1', 
+		u'studioid': u'61', 
+		u'gpid': u'49947', 
+		u'gtin': u'00027616860958', 
+		u'coverurl0': u'http://images.static-bluray.com/movies/dvdcovers/10866_medium.jpg', 
+		u'year': u'1991', 
+		u'url': u'http://www.blu-ray.com/dvd/City-Slickers-DVD/10866/', 
+		u'studio': u'Columbia Pictures', 
+		u'ctid': u'16809', 
+		u'titlesort': u'City Slickers', 
+		u'casingid': u'2424'}
+		
+		session:       1db9d4f6fba0d41ef26ebfe1f0401a49
+		productid:     10866
+		categoryid:    21
+		typeid:        16809
+		dateadded:     1387824662
+		datewatched:   0
+		watched:       1
+		description:   
+		price:         0
+		pricecomment:  
+		exclude:       0
+
+		'''
+		req = requests.post(self.updateCollectableURL,data=data)
+		return not 'error' in req.json()
+		
+	def apiLogin(self,force=False):
+		if not force and self.apiLoggedOn(): return True
+		if not self.canLogin(): return False
+		ak = 'cc32ae1a8a36f52ab0c79f030aa414fb'
+		gcmregid = 'APA91bFQmwwEyckSUXeZ_oMygU77-L330OjNg3tFGbAtWQQPPmhU_w7JRJ0PFUSd1gyvkGgsrPCJVhGsrISTaMFeK9YnRlmkMGWmKcfdh7EQq2185W6MPniKxRE7Us6nSs1LrgqC2N_KJF8cMBKLtSiwjUFY5XG5Hw'
+		req = requests.post(self.apiLoginURL,data={'u':self.user,'p':hashlib.md5(self.password).hexdigest(),'ak':ak,'gcmregid':gcmregid})
+		json = req.json()
+		if 'session' in json: self.sessionID = json['session']
+		return self.apiLoggedOn()
+		
+	def apiLoggedOn(self):
+		return bool(self.sessionID)
+	
+	def canLogin(self):
+		return self.user and self.password
+	
 		
