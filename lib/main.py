@@ -132,7 +132,7 @@ class BluRayReview(BaseWindowDialog):
 			self.setProperty('cover', review.coverImage)
 			self.reviewText.setText(review.review)
 			
-			self.infoText.setText(('[CR][B]%s[/B][CR]' % ('_' * 200)).join((review.overview,review.specifications)))
+			self.infoText.setText(('[CR][B]%s[/B][CR]' % ('_' * 200)).join((review.price,review.blurayRating,review.overview,review.specifications)))
 			
 			items = []
 			for url,url_1080p in review.images:

@@ -37,7 +37,17 @@ class ResultItem:
 		tag = soup.new_tag('p')
 		tag.string = text
 		ul.replaceWith(tag)
-	
+		
+	def convertHeaders(self,soup,tag):
+		for h3 in tag.findAll('h3'):
+			for i in h3.findAll('img'):
+				tag = soup.new_tag('p')
+				tag.string = i.get('alt','')
+				i.replaceWith(tag)
+			h3r = soup.new_tag('p')
+			h3r.string = '[CR][COLOR FF0080D0][B]%s[/B][/COLOR][CR]' % h3.getText()
+			h3.replaceWith(h3r)
+			
 class ReviewsResult(ResultItem):
 	_resultType = 'ReviewsResult'
 	
@@ -86,6 +96,28 @@ class ReviewsResultJSON(ReviewsResult):
 		except:
 			pass
 		
+class ReleasesResult(ReviewsResult):
+	def processSoupData(self,soupData):
+		self.title = soupData.find('h3').getText().strip()
+		#flagImg = soupData.find('img',{'src':lambda x: 'flag' in x})
+		#if flagImg: self.flagImage = flagImg.get('src','')
+		images = soupData.findAll('img')
+		self.icon = images[0].get('src')
+		#self.rating = images[-1].get('alt')
+		#self.ratingImage = images[-1].get('src')
+		data = soupData.findAll('p',text=True)
+		try:
+			self.info = data[-3].text
+		except:
+			pass
+		try:
+			self.description = data[-2].text
+		except:
+			pass
+		self.info = data[-1].text
+		self.url = soupData.find('a').get('href')
+		self.ID = self.url.strip('/').rsplit('/')[-1]
+
 class Review(ReviewsResult):
 	_resultType = 'Review'
 	def __init__(self,soupData):
@@ -95,6 +127,8 @@ class Review(ReviewsResult):
 		self.review = ''
 		self.overview = ''
 		self.specifications = ''
+		self.price = ''
+		self.blurayRating = ''
 		self.historyGraphs = []
 		self.otherEditions = []
 		self.similarTitles = []
@@ -103,24 +137,16 @@ class Review(ReviewsResult):
 	def processSoupData(self,soupData):
 		flagImg = soupData.find('img',{'src':lambda x: 'flags' in x})
 		if flagImg: self.flagImage = flagImg.get('src','')
-		
-		for h3 in soupData.findAll('h3'):
-			for i in h3.findAll('img'):
-				tag = soupData.new_tag('p')
-				tag.string = i.get('alt','')
-				i.replaceWith(tag)
-			h3r = soupData.new_tag('p')
-			h3r.string = '[CR][COLOR FF0080D0][B]%s[/B][/COLOR][CR]' % h3.getText()
-			h3.replaceWith(h3r)
 			
 		for i in soupData.findAll('img',{'id':'reviewScreenShot'}):
 			src = i.get('src','')
 			p1080 = src.replace('.jpg','_1080p.jpg')
 			self.images.append((src,p1080))
 			idx = src.rsplit('.',1)[0].split('_',1)[-1]
-			tag = soupData.new_tag('p')
+			tag = soupData.new_tag('span')
 			tag.string = '[CR][COLOR FFA00000]IMAGE %s[/COLOR][CR]' % idx
-			i.replaceWith(tag)
+			i.insert_before(tag)
+			
 		self.title = soupData.find('title').getText(strip=True)
 		
 		coverImg = soupData.find('img',{'id':'frontimage_overlay'})
@@ -129,30 +155,64 @@ class Review(ReviewsResult):
 		reviewSoup = soupData.find('div',{'id':'reviewItemContent'})
 		
 		if reviewSoup:
+			self.convertHeaders(soupData, reviewSoup)
 			self.convertTable(soupData, reviewSoup.find('table'))
 			self.review = reviewSoup.getText(strip=True)
 			
-		if self.review.startswith('[CR]'): self.review = self.review[4:]
+		price_rating = soupData.findAll('div',{'class','content2'})
+		self.convertHeaders(soupData, price_rating[0])
+		self.price = price_rating[0].getText()
+		if len(price_rating) > 1:
+			self.convertHeaders(soupData, price_rating[1])
+			self.convertTable(soupData, price_rating[1].find('table'))
+			self.blurayRating = price_rating[1].getText()
+			
 		sections = soupData.findAll('div',{'data-role':'collapsible'})
+		for section in sections:
+			h3 = section.find('h3')
+			sectionName = h3 and h3.string.lower() or ''
+			if 'overview' in sectionName:
+				self.processOverview(soupData, section)
+			elif 'specifications' in sectionName:
+				self.processSpecifications(soupData, section)
+			elif 'history' in sectionName:
+				self.processHistoryGraphs(soupData, section)
+			elif 'editions' in sectionName:
+				self.processOtherEditions(soupData, section)
+			elif 'similar' in sectionName:
+				self.processSimilarTitles(soupData, section)
+			elif 'review' in sectionName and not self.review:
+				self.convertHeaders(soupData, section)
+				self.review = section.getText(strip=True)
+				
+		if self.review.startswith('[CR]'): self.review = self.review[4:]
+		if self.overview.startswith('[CR]'): self.overview = self.overview[4:]
+			
+	def processOverview(self,soupData,section):
+		self.convertHeaders(soupData, section)
+		self.convertTable(soupData, section.find('table'),sep=': ')
+		self.overview = section.getText()
 		
-		self.convertTable(soupData, sections[0].find('table'),sep=': ')
-		self.overview = sections[0].getText()
+	def processSpecifications(self,soupData,section):
+		self.convertHeaders(soupData, section)
+		self.convertUL(soupData,section.find('ul'))
+		self.specifications = section.getText()
 		
-		self.convertUL(soupData,sections[1].find('ul'))
-		self.specifications = sections[1].getText()
-		if not len(sections) > 3: return
-		for i in sections[3].findAll('img'):
+	def processHistoryGraphs(self,soupData,section):
+		for i in section.findAll('img'):
 			source = i.previous_sibling
 			source = source and ('[COLOR ' + source.string.rsplit('[COLOR ',1)[-1]) or '?'
 			source = re.sub('\[[^\]]+?\]','',source)
 			self.historyGraphs.append((source,i.get('src','')))
 		
-		if not len(sections) > 4: return
-		for li in sections[4].findAll('li'):
+	def processOtherEditions(self,soupData,section):
+		self.convertHeaders(soupData, section)
+		for li in section.findAll('li'):
 			self.otherEditions.append((li.find('a').get('href'),li.find('img').get('src'),removeColorTags(li.getText())))
-		
-		if not len(sections) > 5: return
-		for li in sections[5].findAll('li'):
+			
+	def processSimilarTitles(self,soupData,section):
+		self.convertHeaders(soupData, section)
+		for li in section.findAll('li'):
 			self.similarTitles.append((li.find('a').get('href'),li.find('img').get('src'),removeColorTags(li.getText())))
 		
 def removeColorTags(text):
@@ -165,11 +225,11 @@ class BlurayComAPI:
 	pageARG = 'page=%s'
 	
 	def __init__(self):
-		pass
+		self.parser = None
 	
 	def url2Soup(self,url):
 		req = requests.get(url)
-		return bs4.BeautifulSoup(req.text)
+		return bs4.BeautifulSoup(req.text,self.parser)
 	
 	def getCategories(self):
 		return [('Reviews','','reviews'),('Releases','','releases'),('Search','','search')]
@@ -178,7 +238,7 @@ class BlurayComAPI:
 		items = []
 		soup = self.url2Soup(self.releasesURL)
 		for i in soup.findAll('li',{'data-role':lambda x: not x}):
-			items.append(ReviewsResult(i))
+			items.append(ReleasesResult(i))
 		return items
 	
 	def getReviews(self,page=''):
@@ -202,7 +262,7 @@ class BlurayComAPI:
 		fixed = re.sub('<i>(?i)','[I]',fixed)
 		fixed = re.sub('</i>(?i)',' [/I]',fixed)
 		fixed = re.sub('<br[^>]*?>(?i)','[CR]',fixed)
-		soup = bs4.BeautifulSoup(fixed,from_encoding=req.encoding)
+		soup = bs4.BeautifulSoup(fixed,self.parser,from_encoding=req.encoding)
 		return Review(soup)
 	
 	def search(self,terms):

@@ -6,6 +6,14 @@
 		<posy>0</posy>
 	</coordinates>
 	<controls>
+		<control type="image">
+			<posx>0</posx>
+			<posy>0</posy>
+			<width>1920</width>
+			<height>1080</height>
+			<texture>script-bluray-com-white_square.png</texture>
+			<colordiffuse>FF000000</colordiffuse>
+		</control>
 		<control type="group">
 			<posx>880</posx>
 			<posy>460</posy>
