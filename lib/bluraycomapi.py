@@ -200,7 +200,6 @@ class CollectionResult(ReviewsResult):
 	exclude: 1
 	'''
 	def processSoupData(self,json):
-		print json
 		json['categoryid'] = self.categoryid
 		self.json = json
 		self.title = json.get('title')
@@ -261,11 +260,14 @@ class Review(ReviewsResult):
 		self.similarTitles = []
 		self.subheading1 = ''
 		self.subheading2 = ''
+		self.owned = False
 		ReviewsResult.__init__(self, soupData)
 		
 	def processSoupData(self,soupData):
 		flagImg = soupData.find('img',{'src':lambda x: 'flags' in x})
 		if flagImg: self.flagImage = flagImg.get('src','')
+		
+		self.owned = bool(soupData.find('a',{'href':lambda x: 'collection.php' in x})) #TODO: Login so we can actually get this to work
 		
 		for i in soupData.findAll('img',{'id':'reviewScreenShot'}):
 			src = i.get('src','')
