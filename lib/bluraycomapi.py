@@ -195,12 +195,17 @@ class CollectionResult(ReviewsResult):
 	dtwatched: 1387165468
 	price: 500
 	pricecomment: Bin
+	the: The
+	edition: Extended Edition
 	exclude: 1
 	'''
 	def processSoupData(self,json):
+		print json
 		json['categoryid'] = self.categoryid
 		self.json = json
 		self.title = json.get('title')
+		the = json.get('the')
+		if the: self.title = the + ' ' + self.title
 		self.icon = json.get('coverurl0')
 		self.url = json.get('url').replace('www','m')
 		rating = json.get('rating')

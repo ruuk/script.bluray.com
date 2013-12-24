@@ -145,9 +145,9 @@ class BluRayReviews(BaseWindowDialog):
 		item = xbmcgui.ListItem()
 		item.setProperty('paging','section')
 		if i._section == 'THISWEEK':
-			item.setLabel("This Week")
+			item.setLabel(T(32017))
 		else:
-			item.setLabel("Next Week")
+			item.setLabel(T(32018))
 		return item
 	
 	def setUpItem(self,item,i):

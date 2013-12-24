@@ -76,3 +76,11 @@ msgstr ""
 msgctxt "#32016"
 msgid "Similar Titles"
 msgstr ""
+
+msgctxt "#32017"
+msgid "This Week"
+msgstr ""
+
+msgctxt "#32018"
+msgid "Next Week"
+msgstr ""
