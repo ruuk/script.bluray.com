@@ -2,7 +2,7 @@ import sys, hashlib, time
 if sys.version < '2.7.3': #If crappy html.parser, use internal version. Using internal version on ATV2 crashes as of XBMC 12.2, so that's why we test version
 	print 'Blu-ray.com: Using internal HTMLParser'
 	import HTMLParser # @UnusedImport
-	
+import html5lib # @UnusedImport
 import re, requests, bs4, urllib # @UnresolvedImport
 
 def LOG(msg):
@@ -297,7 +297,7 @@ class Review(ReviewsResult):
 			self.convertTable(soupData, reviewSoup.find('table'))
 			self.review = self.cleanWhitespace(reviewSoup.getText())
 			
-		price_rating = soupData.findAll('div',{'class','content2'})
+		price_rating = soupData.findAll('div',{'class':'content2'})
 		self.convertHeaders(soupData, price_rating[0])
 		self.price = self.cleanWhitespace(price_rating[0].getText())
 		if len(price_rating) > 1:
@@ -374,7 +374,20 @@ class BlurayComAPI:
 	
 	def url2Soup(self,url):
 		req = requests.get(url)
-		return bs4.BeautifulSoup(req.text,self.parser)
+		try:
+			soup = bs4.BeautifulSoup(req.text, 'lxml')
+			LOG('Using: lxml parser')
+			return soup
+		except:
+			pass
+		try:
+			soup = bs4.BeautifulSoup(req.text, 'html5lib')
+			LOG('Using: html5lib parser')
+			return soup
+		except:
+			pass
+		LOG('Using: html.parser parser')
+		return bs4.BeautifulSoup(req.text, self.parser)
 	
 	def getCategories(self):
 		cats = [(TR['reviews'],'','reviews'),(TR['releases'],'','releases'),(TR['deals'],'','deals'),(TR['search'],'','search')]

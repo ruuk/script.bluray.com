@@ -1,11 +1,11 @@
 Blu-ray.com Changelog
 
-Current Version : 0.0.3
+Current Version : 0.0.4
 
 TODO:
 	Stuff
 		
-*** 0.0.3 ***
+*** 0.0.4 ***
 
 Initial public release
 
