@@ -27,6 +27,7 @@ def imageToCache(src,name):
 class BaseWindowDialog(xbmcgui.WindowXMLDialog):
 	def __init__(self):
 		self.loading = None
+		self._closing = False
 		
 	def loadingOn(self):
 		if not self.loading: return
@@ -37,8 +38,13 @@ class BaseWindowDialog(xbmcgui.WindowXMLDialog):
 		self.setProperty('loading','0')
 		
 	def setProperty(self,key,value):
+		if self._closing: return
 		xbmcgui.Window(xbmcgui.getCurrentWindowDialogId()).setProperty(key,value)
 		xbmcgui.WindowXMLDialog.setProperty(self,key,value)
+		
+	def doClose(self):
+		self._closing = True
+		self.close()
 	
 class BluRayCategories(xbmcgui.WindowXML):
 	def __init__(self,*args,**kwargs):
@@ -105,7 +111,7 @@ class BluRayReviews(BaseWindowDialog):
 				results = API.search(self.search)
 				if not results:
 					xbmcgui.Dialog().ok(T(32008),T(32009))
-					self.close()
+					self.doClose()
 					return
 			elif self.mode == 'RELEASES':
 				results = API.getReleases()
@@ -206,8 +212,10 @@ class BluRayReviews(BaseWindowDialog):
 		try:
 			if action == 117:
 				self.doMenu()
+			elif action == 9 or action == 10:
+				self.doClose()
 		finally:
-			xbmcgui.WindowXMLDialog.onAction(self,action)
+			BaseWindowDialog.onAction(self,action)
 	
 class BluRayReview(BaseWindowDialog):
 	def __init__(self,*args,**kwargs):
@@ -239,6 +247,7 @@ class BluRayReview(BaseWindowDialog):
 			self.setProperty('subheading2', review.subheading2)
 			self.setProperty('flag', review.flagImage)
 			self.setProperty('cover', review.coverImage)
+			if review.owned: self.setProperty('owned',T(32019))
 			self.reviewText.setText(review.review)
 			
 			self.infoText.setText(('[CR][B]%s[/B][CR]' % ('_' * 200)).join((review.price,review.blurayRating,review.overview,review.specifications)))
@@ -296,6 +305,13 @@ class BluRayReview(BaseWindowDialog):
 			if not link: return
 			self.reset(link)
 			
+	def onAction(self,action):
+		try:
+			if action == 9 or action == 10:
+				self.doClose()
+		finally:
+			BaseWindowDialog.onAction(self,action)
+			
 
 class ImageViewer(xbmcgui.WindowXMLDialog):
 	def __init__(self,*args,**kwargs):
@@ -304,6 +320,13 @@ class ImageViewer(xbmcgui.WindowXMLDialog):
 		
 	def onInit(self):
 		self.getControl(150).setImage(self.url)
+		
+	def onAction(self,action):
+		try:
+			if action == 9 or action == 10:
+				self.close()
+		finally:
+			xbmcgui.WindowXMLDialog.onAction(self,action)
 
 def updateUserPass():
 	API.user = ADDON.getSetting('user') or None

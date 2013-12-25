@@ -267,7 +267,7 @@ class Review(ReviewsResult):
 		flagImg = soupData.find('img',{'src':lambda x: 'flags' in x})
 		if flagImg: self.flagImage = flagImg.get('src','')
 		
-		self.owned = bool(soupData.find('a',{'href':lambda x: 'collection.php' in x})) #TODO: Login so we can actually get this to work
+		self.owned = bool(soupData.find('a',{'href':lambda x: '/collection.php' in x})) #TODO: Login so we can actually get this to work
 		
 		for i in soupData.findAll('img',{'id':'reviewScreenShot'}):
 			src = i.get('src','')
@@ -361,6 +361,7 @@ class BlurayComAPI:
 	releasesURL = 'http://m.blu-ray.com/movies'
 	dealsURL = 'http://m.blu-ray.com/deals/index.php'
 	searchURL = 'http://m.blu-ray.com/quicksearch/search.php?country=ALL&section=bluraymovies&keyword={0}'
+	siteLoginURL = 'http://forum.blu-ray.com/login.php'
 	apiLoginURL = 'http://m.blu-ray.com/api/userauth.php'
 	collectionURL = 'http://m.blu-ray.com/api/collection.json.php?categoryid={category}&imgsz=1&session={session_id}'
 	updateCollectableURL = 'http://m.blu-ray.com/api/updatecollectable.php'
@@ -371,9 +372,16 @@ class BlurayComAPI:
 		self.sessionID = ''
 		self.user = ''
 		self.password = ''
+		self._session = None
+	
+	def session(self):
+		if self._session: return self._session
+		self._session = requests.session()
+		self.siteLogin()
+		return self._session
 	
 	def url2Soup(self,url):
-		req = requests.get(url)
+		req = self.session().get(url)
 		try:
 			soup = bs4.BeautifulSoup(req.text, 'lxml')
 			LOG('Using: lxml parser')
@@ -446,7 +454,7 @@ class BlurayComAPI:
 		return (items,self.getPaging(soup))
 	
 	def getReview(self,url):
-		req = requests.get(url)
+		req = self.session().get(url)
 		
 		fixed = ''
 		for line in req.text.splitlines():
@@ -473,7 +481,16 @@ class BlurayComAPI:
 			req = requests.get(self.collectionURL.format(category=category,session_id=self.sessionID))
 			json = req.json()
 			if not 'collection' in json: return []
-		
+		'''
+		{u'collection_types': [
+			{u'addcollcount': u'1', u'system': u'1', u'id': u'1', u'displayorder': u'100000', u'name': u'Owned'},
+			{u'addcollcount': u'0', u'system': u'1', u'id': u'3', u'displayorder': u'100000', u'name': u'Rented'},
+			{u'addcollcount': u'1', u'system': u'1', u'id': u'4', u'displayorder': u'100000', u'name': u'Ordered'},
+			{u'addcollcount': u'0', u'system': u'1', u'id': u'5', u'displayorder': u'100000', u'name': u'Wishlist'},
+			{u'addcollcount': u'0', u'system': u'1', u'id': u'6', u'displayorder': u'100000', u'name': u'Loaned'},
+			{u'addcollcount': u'1', u'system': u'1', u'id': u'7', u'displayorder': u'100000', u'name': u'For trade'},
+			{u'addcollcount': u'1', u'system': u'1', u'id': u'8', u'displayorder': u'100000', u'name': u'For sale'}]
+		'''
 		items = []
 		for i in json['collection']:
 			items.append(CollectionResult(i,category))
@@ -540,6 +557,30 @@ class BlurayComAPI:
 		req = requests.post(self.updateCollectableURL,data=data)
 		return not 'error' in req.json()
 		
+	def siteLogin(self,force=False):
+		'''
+		vb_login_username:         username
+		vb_login_password:         
+		s:                         
+		do:                        login
+		vb_login_md5password:      56b1fb1e8a1561514d1a17ae6ce0e4f9
+		vb_login_md5password_utf:  56b1fb1e8a1561514d1a17ae6ce0e4f9
+		'''
+		if not force and self.siteLoggedOn(): return True
+		if not self.canLogin(): return False
+		md5Pass = hashlib.md5(self.password).hexdigest()
+		self.session().post(self.siteLoginURL, {	'vb_login_username':self.user,
+													'vb_login_password':'',
+													's':'',
+													'do':'login',
+													'vb_login_md5password':md5Pass,
+													'vb_login_md5password_utf':md5Pass
+												})
+		return self.siteLoggedOn()
+		
+	def siteLoggedOn(self):
+		return 'bbsessionhash' in self.session().cookies
+	
 	def apiLogin(self,force=False):
 		if not force and self.apiLoggedOn(): return True
 		if not self.canLogin(): return False

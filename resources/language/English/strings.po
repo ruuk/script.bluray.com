@@ -84,3 +84,7 @@ msgstr ""
 msgctxt "#32018"
 msgid "Next Week"
 msgstr ""
+
+msgctxt "#32019"
+msgid "Owned"
+msgstr ""

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <window>
 	<defaultcontrol>200</defaultcontrol>
+	<animation effect="fade" time="500">WindowClose</animation>
 	<coordinates>
 		<system>1</system>
 		<posx>0</posx>
@@ -46,6 +47,17 @@
 			<height>110</height>
 			<aspectratio align="left">keep</aspectratio>
 			<texture fallback="script-bluray-com-no_cover.png">$INFO[Window.Property(cover)]</texture>
+		</control>
+		<control type="label">
+			<posx>150</posx>
+			<posy>20</posy>
+			<width>600</width>
+			<height>130</height>
+			<font>font12</font>
+			<aligny>top</aligny>
+			<textcolor>FFFF0000</textcolor>
+			<align>left</align>
+			<label>[UPPERCASE][B]$INFO[Window.Property(owned)][/B][/UPPERCASE]</label>
 		</control>
 		<control type="label">
 			<posx>0</posx>
