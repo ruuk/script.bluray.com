@@ -88,3 +88,29 @@ msgstr ""
 msgctxt "#32019"
 msgid "Owned"
 msgstr ""
+
+msgctxt "#32020"
+msgid "Default Collection"
+msgstr ""
+
+msgctxt "#32021"
+msgid "Main"
+msgstr ""
+
+msgctxt "#32022"
+msgid "Collection"
+msgstr ""
+
+msgctxt "#32023"
+msgid "Categories"
+msgstr ""
+
+msgctxt "#32024"
+msgid "Categories to show when changing the category"
+msgstr ""
+
+msgctxt "#32026"
+msgid "Enter Password"
+msgstr ""
+
+

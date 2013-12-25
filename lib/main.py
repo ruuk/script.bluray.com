@@ -1,4 +1,4 @@
-import os, shutil, requests
+import os, sys, shutil, requests
 import xbmc, xbmcgui, xbmcaddon
 import bluraycomapi
 
@@ -76,49 +76,77 @@ class BluRayCategories(xbmcgui.WindowXML):
 			elif item.getProperty('id') == 'collection':
 				openReviewsWindow(mode='COLLECTION')
 			elif item.getProperty('id') == 'search':
-				global LAST_SEARCH
-				key = xbmc.Keyboard(LAST_SEARCH,T(32007))
-				key.doModal()
-				if not key.isConfirmed(): return
-				terms = key.getText()
-				if not terms: return
-				LAST_SEARCH = terms
-				del key
-				openReviewsWindow(search=terms)
+				openReviewsWindow(mode='SEARCH')
 				
 class BluRayReviews(BaseWindowDialog):
 	def __init__(self,*args,**kwargs):
 		BaseWindowDialog.__init__(self)
-		self.search = kwargs.get('search')
 		self.mode = kwargs.get('mode')
 		self.currentResults = []
 		self.idxOffset = 0
+		self.hasSearched = False
 	
 	def onInit(self):
 		self.reviewList = self.getControl(101)
 		self.loading = self.getControl(149)
 		self.showReviews()
 	
-	def refresh(self,page=0,category=7):
+	def refresh(self,page=0,category=None):
 		self.reviewList.reset()
 		self.showReviews(page=page,category=category)
 		
-	def showReviews(self,page=0,category=7):
+	def getCollectionCategories(self,category=None):
+		if category is not None:
+			default = category
+		else:
+			default = getSetting('default_collection',0)
+		if default == 0:
+			cats = []
+			for ID,cat in API.categories:  # @UnusedVariable
+				if getSetting('all_cat_%d' % ID,False): cats.append(ID)
+			return cats
+		else:
+			return [default]
+	
+	def getCollectionCategoriesToShow(self,ids=False):
+		cats = []
+		if ids:
+			for ID,cat in API.categories:
+				if getSetting('used_cat_%d' % ID,False): cats.append(ID)
+		else:
+			for ID,cat in API.categories:
+				if getSetting('used_cat_%d' % ID,False): cats.append(cat)
+		return cats
+
+	def showReviews(self,page=0,category=None):
 		self.loadingOn()
 		try:
 			paging = (None,None)
-			if self.search:
-				results = API.search(self.search)
+			if self.mode == 'SEARCH':
+				self.loadingOff()
+				w = openWindow(BluRaySearch,'bluray-com-search.xml',return_window=True)
+				self.loadingOn()
+				if w.canceled:
+					if not self.hasSearched: self.doClose()
+					return
+				if not w.keywords:
+					if not self.hasSearched: self.doClose()
+					return
+				results = API.search(w.keywords,w.section,w.country)
+				del w
 				if not results:
 					xbmcgui.Dialog().ok(T(32008),T(32009))
+					if self.hasSearched: return
 					self.doClose()
 					return
+				self.hasSearched = True
+				self.reviewList.reset()
 			elif self.mode == 'RELEASES':
 				results = API.getReleases()
 			elif self.mode == 'DEALS':
 				results, paging = API.getDeals(page)
 			elif self.mode == 'COLLECTION':
-				results = API.getCollection(category=category)
+				results = API.getCollection(categories=self.getCollectionCategories(category))
 				self.currentResults = results
 			else:
 				results, paging = API.getReviews(page)
@@ -168,15 +196,20 @@ class BluRayReviews(BaseWindowDialog):
 				
 	def doMenu(self):
 		if self.mode == 'COLLECTION':
-			items = ['Blu-ray','DVD','Toggle Watched']
+			items = ['All']
+			for cat in self.getCollectionCategoriesToShow(): # @UnusedVariable
+				items.append(cat)
+			items.append('Toggle Watched')
 			idx = xbmcgui.Dialog().select('Category',items)
 			if idx < 0: return
 			if idx == 0:
-				self.refresh(category=7)
-			elif idx == 1:
-				self.refresh(category=21)
+				self.refresh(category=0)
 			elif idx == len(items) - 1:
 				self.toggleWatched()
+			else:
+				self.refresh(category=self.getCollectionCategoriesToShow(ids=True)[idx-1])
+		elif self.mode == 'SEARCH':
+			self.showReviews()
 
 	def toggleWatched(self):
 		self.loadingOn()
@@ -247,7 +280,7 @@ class BluRayReview(BaseWindowDialog):
 			self.setProperty('subheading2', review.subheading2)
 			self.setProperty('flag', review.flagImage)
 			self.setProperty('cover', review.coverImage)
-			if review.owned: self.setProperty('owned',T(32019))
+			self.setProperty('owned',review.owned and T(32019) or '')
 			self.reviewText.setText(review.review)
 			
 			self.infoText.setText(('[CR][B]%s[/B][CR]' % ('_' * 200)).join((review.price,review.blurayRating,review.overview,review.specifications)))
@@ -312,6 +345,84 @@ class BluRayReview(BaseWindowDialog):
 		finally:
 			BaseWindowDialog.onAction(self,action)
 			
+class BluRaySearch(BaseWindowDialog):
+	def __init__(self,*args,**kwargs):
+		self.keywords = LAST_SEARCH
+		self.section = 'bluraymovies'
+		self.country = 'all'
+		self.canceled = True
+		BaseWindowDialog.__init__(self)
+		
+	def onInit(self):
+		self.keywordsButton = self.getControl(102)
+		self.sectionList = self.getControl(100)
+		self.countryList = self.getControl(101)
+		self.fillSearch()
+		
+	def fillSearch(self):
+		if LAST_SEARCH: self.keywordsButton.setLabel(LAST_SEARCH)
+		lastSection = getSetting('search_last_section','')
+		lastCountry = getSetting('search_last_country','')
+		sectionIDX = 0
+		countryIDX = 0
+		
+		items = []
+		ct = 0
+		for sid, sname in API.sections:
+			item = xbmcgui.ListItem(label=sname)
+			item.setProperty('sectionid',sid)
+			items.append(item)
+			if sid == lastSection: sectionIDX = ct
+			ct+=1
+		self.sectionList.addItems(items)
+		items = []
+		ct = 0
+		for c in API.countries:
+			item = xbmcgui.ListItem(label=c.get('n',''))
+			item.setProperty('flag',c.get('u',''))
+			ccode = c.get('c','')
+			item.setProperty('country',ccode)
+			items.append(item)
+			if ccode == lastCountry: countryIDX = ct 
+			ct+=1
+		self.countryList.addItems(items)
+		
+		self.sectionList.selectItem(sectionIDX)
+		self.countryList.selectItem(countryIDX)
+		
+	def getKeywords(self):
+		key = xbmc.Keyboard(LAST_SEARCH,T(32007))
+		key.doModal()
+		if not key.isConfirmed(): return
+		terms = key.getText()
+		if not terms: return
+		del key
+		self.keywords = terms
+		self.keywordsButton.setLabel(terms)
+				
+	def setSearch(self):
+		global LAST_SEARCH
+		self.canceled = False
+		self.section = self.sectionList.getSelectedItem().getProperty('sectionid')
+		self.country = self.countryList.getSelectedItem().getProperty('country')
+		if self.keywords: LAST_SEARCH = self.keywords
+		ADDON.setSetting('search_last_section',self.section)
+		ADDON.setSetting('search_last_country',self.country)
+			
+	def onClick(self,controlID):
+		if controlID == 102:
+			self.getKeywords()
+		elif controlID == 103:
+			self.setSearch()
+			self.doClose()
+			
+	def onAction(self,action):
+		try:
+			if action == 9 or action == 10:
+				self.doClose()
+		finally:
+			BaseWindowDialog.onAction(self,action)
+			
 
 class ImageViewer(xbmcgui.WindowXMLDialog):
 	def __init__(self,*args,**kwargs):
@@ -328,22 +439,51 @@ class ImageViewer(xbmcgui.WindowXMLDialog):
 		finally:
 			xbmcgui.WindowXMLDialog.onAction(self,action)
 
+def getSetting(key,default=None):
+	setting = ADDON.getSetting(key)
+	return _processSetting(setting,default)
+
+def _processSetting(setting,default):
+	if not setting: return default
+	if isinstance(default,bool):
+		return setting.lower() == 'true'
+	elif isinstance(default,int):
+		return int(float(setting or 0))
+	elif isinstance(default,list):
+		if setting: return setting.split(':!,!:')
+		else: return default
+	
+	return setting
+
 def updateUserPass():
 	API.user = ADDON.getSetting('user') or None
-	API.password = ADDON.getSetting('pass') or None
-		
+	API.md5password = ADDON.getSetting('pass') or None
+	
+def getPassword():
+	key = xbmc.Keyboard('',T(32026),True)
+	key.doModal()
+	if not key.isConfirmed(): return
+	password = key.getText()
+	if not password: return
+	del key
+	import hashlib
+	ADDON.setSetting('pass',hashlib.md5(password).hexdigest())
+	
 def setGlobalSkinProperty(key,value=''):
 	xbmcgui.Window(10000).setProperty('script.bluray.com-%s' % key,value)
 	
-def openReviewsWindow(search=None,mode=None):
+def openReviewsWindow(mode=None):
 	setGlobalSkinProperty('reviews_open','1')
-	openWindow(BluRayReviews,'bluray-com-reviews.xml',search=search,mode=mode)
+	openWindow(BluRayReviews,'bluray-com-reviews.xml',mode=mode)
 	setGlobalSkinProperty('reviews_open','0')
 		
-def openWindow(window_class,xml_file,**kwargs):
+def openWindow(window_class,xml_file,return_window=False,**kwargs):
 	w = window_class(xml_file , xbmc.translatePath(ADDON.getAddonInfo('path')), 'Main',**kwargs)
 	w.doModal()
-	del w
+	if return_window:
+		return w
+	else:
+		del w
 	
 def main():
 	global API
@@ -360,4 +500,7 @@ def main():
 	openWindow(BluRayCategories,'bluray-com-categories.xml')
 	
 if __name__ == '__main__':
-	main()
+	if sys.argv[-1] == 'get_password':
+		getPassword()
+	else:
+		main()

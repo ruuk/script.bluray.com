@@ -360,18 +360,81 @@ class BlurayComAPI:
 	reviewsURL = 'http://m.blu-ray.com/movies/reviews.php'
 	releasesURL = 'http://m.blu-ray.com/movies'
 	dealsURL = 'http://m.blu-ray.com/deals/index.php'
-	searchURL = 'http://m.blu-ray.com/quicksearch/search.php?country=ALL&section=bluraymovies&keyword={0}'
+	searchURL = 'http://m.blu-ray.com/quicksearch/search.php?country={country}&section={section}&keyword={keyword}'
 	siteLoginURL = 'http://forum.blu-ray.com/login.php'
 	apiLoginURL = 'http://m.blu-ray.com/api/userauth.php'
 	collectionURL = 'http://m.blu-ray.com/api/collection.json.php?categoryid={category}&imgsz=1&session={session_id}'
 	updateCollectableURL = 'http://m.blu-ray.com/api/updatecollectable.php'
+	countriesURL = 'http://m.blu-ray.com/countries.json.php?_=1387933807086'
 	pageARG = 'page=%s'
+	
+	categories = (	(7,'Blu-ray'),
+					(21,'DVD'),
+					(16,'PS3'),
+					(29,'PS4'),
+					(23,'XBox 360'),
+					(30,'XBox One'),
+					(26,'Wii'),
+					(27,'Wii U'),
+					(20,'Movies'),
+					(24,'UltraViolet'),
+					(28,'Amazon'),
+					(31,'iTunes')
+				)
+	
+	sections = (	('bluraymovies','Blu-ray'),
+					('3d','3D Blu-Ray'),
+					('dvdmovies','DVD'),
+					('theatrical','Movies'),
+					('uvmovies','UltraViolet'),
+					('aivmovies','Amazon'),
+					('itunesmovies','iTunes'),
+					('ps3','PS3')
+			)
+				
+	countries = [	{"c":"all","n":"All countries","u":"http://images.static-bluray.com/flags/global-transparent.png"},
+					{"c":"us","n":"United States","u":"http://images3.static-bluray.com/flags/US.png"},
+					{"c":"uk","n":"United Kingdom","u":"http://images3.static-bluray.com/flags/UK.png"},
+					{"c":"ca","n":"Canada","u":"http://images3.static-bluray.com/flags/CA.png"},
+					{"c":"de","n":"Germany","u":"http://images2.static-bluray.com/flags/DE.png"},
+					{"c":"fr","n":"France","u":"http://images.static-bluray.com/flags/FR.png"},
+					{"c":"au","n":"Australia","u":"http://images.static-bluray.com/flags/AU.png"},
+					{"c":"nz","n":"New Zealand","u":"http://images.static-bluray.com/flags/NZ.png"},
+					{"c":"za","n":"South Africa","u":"http://images4.static-bluray.com/flags/ZA.png"},
+					{"c":"it","n":"Italy","u":"http://images2.static-bluray.com/flags/IT.png"},
+					{"c":"es","n":"Spain","u":"http://images3.static-bluray.com/flags/ES.png"},
+					{"c":"hk","n":"Hong Kong","u":"http://images4.static-bluray.com/flags/HK.png"},
+					{"c":"kr","n":"South Korea","u":"http://images2.static-bluray.com/flags/KR.png"},
+					{"c":"jp","n":"Japan","u":"http://images3.static-bluray.com/flags/JP.png"},
+					{"c":"tw","n":"Taiwan","u":"http://images4.static-bluray.com/flags/TW.png"},
+					{"c":"be","n":"Belgium","u":"http://images4.static-bluray.com/flags/BE.png"},
+					{"c":"at","n":"Austria","u":"http://images2.static-bluray.com/flags/AT.png"},
+					{"c":"ch","n":"Switzerland","u":"http://images4.static-bluray.com/flags/CH.png"},
+					{"c":"br","n":"Brazil","u":"http://images.static-bluray.com/flags/BR.png"},
+					{"c":"pt","n":"Portugal","u":"http://images.static-bluray.com/flags/PT.png"},
+					{"c":"cn","n":"China","u":"http://images2.static-bluray.com/flags/CN.png"},
+					{"c":"cz","n":"Czech Republic","u":"http://images2.static-bluray.com/flags/CZ.png"},
+					{"c":"dk","n":"Denmark","u":"http://images4.static-bluray.com/flags/DK.png"},
+					{"c":"fi","n":"Finland","u":"http://images4.static-bluray.com/flags/FI.png"},
+					{"c":"gr","n":"Greece","u":"http://images2.static-bluray.com/flags/GR.png"},
+					{"c":"hu","n":"Hungary","u":"http://images2.static-bluray.com/flags/HU.png"},
+					{"c":"in","n":"India","u":"http://images4.static-bluray.com/flags/IN.png"},
+					{"c":"mx","n":"Mexico","u":"http://images2.static-bluray.com/flags/MX.png"},
+					{"c":"nl","n":"Holland","u":"http://images3.static-bluray.com/flags/NL.png"},
+					{"c":"no","n":"Norway","u":"http://images2.static-bluray.com/flags/NO.png"},
+					{"c":"pl","n":"Poland","u":"http://images.static-bluray.com/flags/PL.png"},
+					{"c":"ru","n":"Russia","u":"http://images4.static-bluray.com/flags/RU.png"},
+					{"c":"se","n":"Sweden","u":"http://images3.static-bluray.com/flags/SE.png"},
+					{"c":"th","n":"Thailand","u":"http://images.static-bluray.com/flags/TH.png"},
+					{"c":"tr","n":"Turkey","u":"http://images3.static-bluray.com/flags/TR.png"},
+					{"c":"ua","n":"Ukraine","u":"http://images.static-bluray.com/flags/UA.png"}
+				]
 	
 	def __init__(self):
 		self.parser = None
 		self.sessionID = ''
-		self.user = ''
-		self.password = ''
+		self.user = None
+		self.md5password = None
 		self._session = None
 	
 	def session(self):
@@ -471,16 +534,7 @@ class BlurayComAPI:
 		soup = bs4.BeautifulSoup(fixed,self.parser,from_encoding=req.encoding)
 		return Review(soup)
 	
-	def getCollection(self,category='7'):
-		if not self.apiLogin(): return
-		
-		req = requests.get(self.collectionURL.format(category=category,session_id=self.sessionID))
-		json = req.json()
-		if not 'collection' in json:
-			if not self.apiLogin(force=True): return []
-			req = requests.get(self.collectionURL.format(category=category,session_id=self.sessionID))
-			json = req.json()
-			if not 'collection' in json: return []
+	def getCollection(self,categories):
 		'''
 		{u'collection_types': [
 			{u'addcollcount': u'1', u'system': u'1', u'id': u'1', u'displayorder': u'100000', u'name': u'Owned'},
@@ -491,14 +545,26 @@ class BlurayComAPI:
 			{u'addcollcount': u'1', u'system': u'1', u'id': u'7', u'displayorder': u'100000', u'name': u'For trade'},
 			{u'addcollcount': u'1', u'system': u'1', u'id': u'8', u'displayorder': u'100000', u'name': u'For sale'}]
 		'''
+		if not self.apiLogin(): return
 		items = []
-		for i in json['collection']:
-			items.append(CollectionResult(i,category))
+		for category in categories:
+			req = requests.get(self.collectionURL.format(category=category,session_id=self.sessionID))
+			json = req.json()
+			if not 'collection' in json:
+				if not self.apiLogin(force=True): return []
+				req = requests.get(self.collectionURL.format(category=category,session_id=self.sessionID))
+				json = req.json()
+				if not 'collection' in json: return []
+			
+			
+			for i in json['collection']:
+				items.append(CollectionResult(i,category))
+				
 		items.sort(key=lambda i: i.sortTitle)
 		return items
 	
-	def search(self,terms):
-		req = requests.get(self.searchURL.format(urllib.quote(terms)))
+	def search(self,terms,section='bluraymovies',country='all'):
+		req = requests.get(self.searchURL.format(section=section,country=country.upper(),keyword=urllib.quote(terms)))
 		results = []
 		for i in req.json().get('items',[]):
 			results.append(ReviewsResultJSON(i))
@@ -568,13 +634,12 @@ class BlurayComAPI:
 		'''
 		if not force and self.siteLoggedOn(): return True
 		if not self.canLogin(): return False
-		md5Pass = hashlib.md5(self.password).hexdigest()
 		self.session().post(self.siteLoginURL, {	'vb_login_username':self.user,
 													'vb_login_password':'',
 													's':'',
 													'do':'login',
-													'vb_login_md5password':md5Pass,
-													'vb_login_md5password_utf':md5Pass
+													'vb_login_md5password':self.md5password,
+													'vb_login_md5password_utf':self.md5password
 												})
 		return self.siteLoggedOn()
 		
@@ -586,7 +651,7 @@ class BlurayComAPI:
 		if not self.canLogin(): return False
 		ak = 'cc32ae1a8a36f52ab0c79f030aa414fb'
 		gcmregid = 'APA91bFQmwwEyckSUXeZ_oMygU77-L330OjNg3tFGbAtWQQPPmhU_w7JRJ0PFUSd1gyvkGgsrPCJVhGsrISTaMFeK9YnRlmkMGWmKcfdh7EQq2185W6MPniKxRE7Us6nSs1LrgqC2N_KJF8cMBKLtSiwjUFY5XG5Hw'
-		req = requests.post(self.apiLoginURL,data={'u':self.user,'p':hashlib.md5(self.password).hexdigest(),'ak':ak,'gcmregid':gcmregid})
+		req = requests.post(self.apiLoginURL,data={'u':self.user,'p':self.md5password,'ak':ak,'gcmregid':gcmregid})
 		json = req.json()
 		if 'session' in json: self.sessionID = json['session']
 		return self.apiLoggedOn()
@@ -595,6 +660,6 @@ class BlurayComAPI:
 		return bool(self.sessionID)
 	
 	def canLogin(self):
-		return self.user and self.password
+		return self.user and self.md5password
 	
 		
