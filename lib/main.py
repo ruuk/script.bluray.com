@@ -322,9 +322,10 @@ class BluRayReview(BaseWindowDialog):
 				item.setProperty('text',text)
 				items.append(item)
 			self.altList.addItems(items)
-			self.setFocus(self.imagesList)
 		finally:
 			self.loading.setVisible(False)
+			self.setFocus(self.imagesList)
+			self.setFocusId(200)
 		
 	def onClick(self,controlID):
 		if controlID == 102:

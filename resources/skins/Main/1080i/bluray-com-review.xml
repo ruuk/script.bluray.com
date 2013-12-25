@@ -127,71 +127,24 @@
 					</control>
 				</focusedlayout>
 			</control>
-		</control>
-		<control type="textbox" id="130">
-			<posx>410</posx>
-			<posy>130</posy>
-			<width>1240</width>
-			<height>920</height>
-			<font>font13</font>
-			<textcolor>FFFFFFFF</textcolor>
-			<pagecontrol>131</pagecontrol>
-		</control>
-		<control type="scrollbar" id="131">
-			<description>Review Scrollbar</description>
-			<posx>1660</posx>
-			<posy>130</posy>
-			<width>6</width>
-			<height>920</height>
-			<onleft>102</onleft>
-			<onright>133</onright>
-			<texturesliderbackground>-</texturesliderbackground>
-			<texturesliderbar></texturesliderbar>
-			<texturesliderbarfocus>script-bluray-com-white_square.png</texturesliderbarfocus>
-			<textureslidernib>-</textureslidernib>
-			<textureslidernibfocus>-</textureslidernibfocus>
-			<orientation>vertical</orientation>
-			<showonepage>true</showonepage>
-			<colordiffuse>FF0060B0</colordiffuse>
-			<visible>Control.IsVisible(130)</visible>
-		</control>
-		<control type="group">
-			<animation effect="slide" end="-840,0" time="200" condition="Control.HasFocus(133) | Control.HasFocus(134)">Conditional</animation>
-			<posx>1670</posx>
-			<posy>130</posy>
-			<control type="image">
-				<posx>-15</posx>
-				<posy>0</posy>
-				<width>15</width>
-				<height>920</height>
-				<texture>script-bluray-com-white_fade_left.png</texture>
-				<colordiffuse>A0000000</colordiffuse>
-			</control>
-			<control type="image">
-				<posx>0</posx>
-				<posy>0</posy>
-				<width>1090</width>
-				<height>920</height>
-				<texture>script-bluray-com-white_square.png</texture>
-				<colordiffuse>FF001818</colordiffuse>
-			</control>
-			<control type="textbox" id="132">
-				<posx>20</posx>
-				<posy>0</posy>
-				<width>950</width>
+		
+			<control type="textbox" id="130">
+				<posx>410</posx>
+				<posy>130</posy>
+				<width>1240</width>
 				<height>920</height>
 				<font>font13</font>
 				<textcolor>FFFFFFFF</textcolor>
-				<pagecontrol>133</pagecontrol>
+				<pagecontrol>131</pagecontrol>
 			</control>
-			<control type="scrollbar" id="133">
+			<control type="scrollbar" id="131">
 				<description>Review Scrollbar</description>
-				<posx>980</posx>
-				<posy>0</posy>
+				<posx>1660</posx>
+				<posy>130</posy>
 				<width>6</width>
 				<height>920</height>
-				<onleft>131</onleft>
-				<onright>134</onright>
+				<onleft>102</onleft>
+				<onright>133</onright>
 				<texturesliderbackground>-</texturesliderbackground>
 				<texturesliderbar></texturesliderbar>
 				<texturesliderbarfocus>script-bluray-com-white_square.png</texturesliderbarfocus>
@@ -200,137 +153,185 @@
 				<orientation>vertical</orientation>
 				<showonepage>true</showonepage>
 				<colordiffuse>FF0060B0</colordiffuse>
-				<visible>Control.IsVisible(132)</visible>
+				<visible>Control.IsVisible(130)</visible>
 			</control>
-		</control>
-		<control type="group">
-			<animation effect="slide" end="-480,0" time="200" condition="Control.HasFocus(134)">Conditional</animation>
-			<posx>1820</posx>
-			<posy>130</posy>
-			<control type="image">
-				<posx>-15</posx>
-				<posy>0</posy>
-				<width>15</width>
-				<height>920</height>
-				<texture>script-bluray-com-white_fade_left.png</texture>
-				<colordiffuse>A0000000</colordiffuse>
+			<control type="group">
+				<animation effect="slide" end="-840,0" time="200" condition="Control.HasFocus(133) | Control.HasFocus(134)">Conditional</animation>
+				<posx>1670</posx>
+				<posy>130</posy>
+				<control type="image">
+					<posx>-15</posx>
+					<posy>0</posy>
+					<width>15</width>
+					<height>920</height>
+					<texture>script-bluray-com-white_fade_left.png</texture>
+					<colordiffuse>A0000000</colordiffuse>
+				</control>
+				<control type="image">
+					<posx>0</posx>
+					<posy>0</posy>
+					<width>1090</width>
+					<height>920</height>
+					<texture>script-bluray-com-white_square.png</texture>
+					<colordiffuse>FF001818</colordiffuse>
+				</control>
+				<control type="textbox" id="132">
+					<posx>20</posx>
+					<posy>0</posy>
+					<width>950</width>
+					<height>920</height>
+					<font>font13</font>
+					<textcolor>FFFFFFFF</textcolor>
+					<pagecontrol>133</pagecontrol>
+				</control>
+				<control type="scrollbar" id="133">
+					<description>Review Scrollbar</description>
+					<posx>980</posx>
+					<posy>0</posy>
+					<width>6</width>
+					<height>920</height>
+					<onleft>131</onleft>
+					<onright>134</onright>
+					<texturesliderbackground>-</texturesliderbackground>
+					<texturesliderbar></texturesliderbar>
+					<texturesliderbarfocus>script-bluray-com-white_square.png</texturesliderbarfocus>
+					<textureslidernib>-</textureslidernib>
+					<textureslidernibfocus>-</textureslidernibfocus>
+					<orientation>vertical</orientation>
+					<showonepage>true</showonepage>
+					<colordiffuse>FF0060B0</colordiffuse>
+					<visible>Control.IsVisible(132)</visible>
+				</control>
 			</control>
-			<control type="image">
-				<posx>0</posx>
-				<posy>0</posy>
-				<width>600</width>
-				<height>920</height>
-				<texture>script-bluray-com-white_square.png</texture>
-				<colordiffuse>FF102000</colordiffuse>
-			</control>
-			<control type="list" id="134">
-				<posx>0</posx>
-				<posy>0</posy>
-				<width>600</width>
-				<height>920</height>
-				<scrolltime>200</scrolltime>
-				<onleft>133</onleft>
-				<itemlayout height="200">
-					<control type="group">
-						<visible>StringCompare(ListItem.Property(separator),1)</visible>
+			<control type="group">
+				<animation effect="slide" end="-480,0" time="200" condition="Control.HasFocus(134)">Conditional</animation>
+				<posx>1820</posx>
+				<posy>130</posy>
+				<control type="image">
+					<posx>-15</posx>
+					<posy>0</posy>
+					<width>15</width>
+					<height>920</height>
+					<texture>script-bluray-com-white_fade_left.png</texture>
+					<colordiffuse>A0000000</colordiffuse>
+				</control>
+				<control type="image">
+					<posx>0</posx>
+					<posy>0</posy>
+					<width>600</width>
+					<height>920</height>
+					<texture>script-bluray-com-white_square.png</texture>
+					<colordiffuse>FF102000</colordiffuse>
+				</control>
+				<control type="list" id="134">
+					<posx>0</posx>
+					<posy>0</posy>
+					<width>600</width>
+					<height>920</height>
+					<scrolltime>200</scrolltime>
+					<onleft>133</onleft>
+					<itemlayout height="200">
+						<control type="group">
+							<visible>StringCompare(ListItem.Property(separator),1)</visible>
+							<control type="image">
+								<posx>0</posx>
+								<posy>50</posy>
+								<width>600</width>
+								<height>100</height>
+								<texture>script-bluray-com-white_square.png</texture>
+								<colordiffuse>FF808080</colordiffuse>
+							</control>
+							<control type="label">
+								<posx>295</posx>
+								<posy>50</posy>
+								<width>550</width>
+								<height>100</height>
+								<font>font30</font>
+								<aligny>center</aligny>
+								<textcolor>FFFFFFFF</textcolor>
+								<align>center</align>
+								<label>[UPPERCASE][B]$INFO[ListItem.Label][/B][/UPPERCASE]</label>
+							</control>
+						</control>
+						<control type="group">
+							<visible>!StringCompare(ListItem.Property(separator),1)</visible>
+							<control type="image">
+								<posx>20</posx>
+								<posy>10</posy>
+								<width>180</width>
+								<height>180</height>
+								<aspectratio align="left">keep</aspectratio>
+								<texture fallback="script-bluray-com-no_cover.png">$INFO[ListItem.Icon]</texture>
+							</control>
+							<control type="textbox">
+								<posx>210</posx>
+								<posy>20</posy>
+								<width>360</width>
+								<height>160</height>
+								<font>font10</font>
+								<aligny>top</aligny>
+								<textcolor>FFFFFFFF</textcolor>
+								<align>left</align>
+								<label>$INFO[ListItem.Property(text)]</label>
+							</control>
+						</control>
+					</itemlayout>
+					<focusedlayout height="200">
 						<control type="image">
 							<posx>0</posx>
-							<posy>50</posy>
+							<posy>0</posy>
 							<width>600</width>
-							<height>100</height>
+							<height>200</height>
 							<texture>script-bluray-com-white_square.png</texture>
-							<colordiffuse>FF808080</colordiffuse>
+							<colordiffuse>FF0060B0</colordiffuse>
+							<visible>Control.HasFocus(134)</visible>
 						</control>
-						<control type="label">
-							<posx>295</posx>
-							<posy>50</posy>
-							<width>550</width>
-							<height>100</height>
-							<font>font30</font>
-							<aligny>center</aligny>
-							<textcolor>FFFFFFFF</textcolor>
-							<align>center</align>
-							<label>[UPPERCASE][B]$INFO[ListItem.Label][/B][/UPPERCASE]</label>
+						<control type="group">
+							<visible>StringCompare(ListItem.Property(separator),1)</visible>
+							<control type="image">
+								<posx>0</posx>
+								<posy>50</posy>
+								<width>600</width>
+								<height>100</height>
+								<texture>script-bluray-com-white_square.png</texture>
+								<colordiffuse>FF808080</colordiffuse>
+							</control>
+							<control type="label">
+								<posx>295</posx>
+								<posy>50</posy>
+								<width>550</width>
+								<height>100</height>
+								<font>font30</font>
+								<aligny>center</aligny>
+								<textcolor>FFFFFFFF</textcolor>
+								<align>center</align>
+								<label>[UPPERCASE][B]$INFO[ListItem.Label][/B][/UPPERCASE]</label>
+							</control>
 						</control>
-					</control>
-					<control type="group">
-						<visible>!StringCompare(ListItem.Property(separator),1)</visible>
-						<control type="image">
-							<posx>20</posx>
-							<posy>10</posy>
-							<width>180</width>
-							<height>180</height>
-							<aspectratio align="left">keep</aspectratio>
-							<texture fallback="script-bluray-com-no_cover.png">$INFO[ListItem.Icon]</texture>
+						<control type="group">
+							<visible>!StringCompare(ListItem.Property(separator),1)</visible>
+							<control type="image">
+								<posx>20</posx>
+								<posy>10</posy>
+								<width>180</width>
+								<height>180</height>
+								<aspectratio align="left">keep</aspectratio>
+								<texture fallback="script-bluray-com-no_cover.png">$INFO[ListItem.Icon]</texture>
+							</control>
+							<control type="textbox">
+								<posx>210</posx>
+								<posy>20</posy>
+								<width>360</width>
+								<height>160</height>
+								<font>font10</font>
+								<aligny>top</aligny>
+								<textcolor>FFFFFFFF</textcolor>
+								<align>left</align>
+								<label>$INFO[ListItem.Property(text)]</label>
+							</control>
 						</control>
-						<control type="textbox">
-							<posx>210</posx>
-							<posy>20</posy>
-							<width>360</width>
-							<height>160</height>
-							<font>font10</font>
-							<aligny>top</aligny>
-							<textcolor>FFFFFFFF</textcolor>
-							<align>left</align>
-							<label>$INFO[ListItem.Property(text)]</label>
-						</control>
-					</control>
-				</itemlayout>
-				<focusedlayout height="200">
-					<control type="image">
-						<posx>0</posx>
-						<posy>0</posy>
-						<width>600</width>
-						<height>200</height>
-						<texture>script-bluray-com-white_square.png</texture>
-						<colordiffuse>FF0060B0</colordiffuse>
-						<visible>Control.HasFocus(134)</visible>
-					</control>
-					<control type="group">
-						<visible>StringCompare(ListItem.Property(separator),1)</visible>
-						<control type="image">
-							<posx>0</posx>
-							<posy>50</posy>
-							<width>600</width>
-							<height>100</height>
-							<texture>script-bluray-com-white_square.png</texture>
-							<colordiffuse>FF808080</colordiffuse>
-						</control>
-						<control type="label">
-							<posx>295</posx>
-							<posy>50</posy>
-							<width>550</width>
-							<height>100</height>
-							<font>font30</font>
-							<aligny>center</aligny>
-							<textcolor>FFFFFFFF</textcolor>
-							<align>center</align>
-							<label>[UPPERCASE][B]$INFO[ListItem.Label][/B][/UPPERCASE]</label>
-						</control>
-					</control>
-					<control type="group">
-						<visible>!StringCompare(ListItem.Property(separator),1)</visible>
-						<control type="image">
-							<posx>20</posx>
-							<posy>10</posy>
-							<width>180</width>
-							<height>180</height>
-							<aspectratio align="left">keep</aspectratio>
-							<texture fallback="script-bluray-com-no_cover.png">$INFO[ListItem.Icon]</texture>
-						</control>
-						<control type="textbox">
-							<posx>210</posx>
-							<posy>20</posy>
-							<width>360</width>
-							<height>160</height>
-							<font>font10</font>
-							<aligny>top</aligny>
-							<textcolor>FFFFFFFF</textcolor>
-							<align>left</align>
-							<label>$INFO[ListItem.Property(text)]</label>
-						</control>
-					</control>
-				</focusedlayout>
+					</focusedlayout>
+				</control>
 			</control>
 		</control>
 		<control type="image">
