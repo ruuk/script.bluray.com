@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <window>
+	<onload>SetProperty(show_images,0)</onload>
 	<coordinates>
 		<system>1</system>
 		<posx>0</posx>
@@ -15,6 +16,7 @@
 			<colordiffuse>FF000000</colordiffuse>
 		</control>
 		<control type="group">
+			<visible>StringCompare(Window.Property(show_images),1) + !StringCompare(Window.Property(image),)</visible>
 			<posx>880</posx>
 			<posy>460</posy>
 			<control type="image">
@@ -32,13 +34,68 @@
 				<texture>script-bluray-com-loading.gif</texture>
 			</control>
 		</control>
-		<control type="image" id="150">
+		<control type="image">
 			<posx>0</posx>
 			<posy>0</posy>
 			<width>1920</width>
 			<height>1080</height>
-			<texture></texture>
+			<texture>$INFO[Window.Property(image)]</texture>
 			<aspectratio>keep</aspectratio>
+		</control>
+		<control type="group">
+			<visible>StringCompare(Window.Property(image),) + StringCompare(Window.Property(show_images),1)</visible>
+			<control type="group">
+				<posx>400</posx>
+				<posy>460</posy>
+				<control type="image">
+					<posx>0</posx>
+					<posy>0</posy>
+					<width>160</width>
+					<height>160</height>
+					<texture>script-bluray-com-loading_bg.png</texture>
+				</control>
+				<control type="image">
+					<posx>16</posx>
+					<posy>16</posy>
+					<width>128</width>
+					<height>128</height>
+					<texture>script-bluray-com-loading.gif</texture>
+				</control>
+			</control>
+			<control type="group">
+				<posx>1360</posx>
+				<posy>460</posy>
+				<control type="image">
+					<posx>0</posx>
+					<posy>0</posy>
+					<width>160</width>
+					<height>160</height>
+					<texture>script-bluray-com-loading_bg.png</texture>
+				</control>
+				<control type="image">
+					<posx>16</posx>
+					<posy>16</posy>
+					<width>128</width>
+					<height>128</height>
+					<texture>script-bluray-com-loading.gif</texture>
+				</control>
+			</control>
+			<control type="image">
+				<posx>0</posx>
+				<posy>0</posy>
+				<width>960</width>
+				<height>1080</height>
+				<aspectratio align="left'">keep</aspectratio>
+				<texture fallback="script-bluray-com-no_cover.png">$INFO[Window.Property(front)]</texture>
+			</control>
+			<control type="image">
+				<posx>960</posx>
+				<posy>0</posy>
+				<width>960</width>
+				<height>1080</height>
+				<aspectratio align="right'">keep</aspectratio>
+				<texture fallback="script-bluray-com-no_cover.png">$INFO[Window.Property(back)]</texture>
+			</control>
 		</control>
 	</controls>
 </window>

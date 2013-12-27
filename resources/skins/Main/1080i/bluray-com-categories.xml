@@ -30,7 +30,7 @@
 		</control>
 		<control type="group" id="200">
 			<defaultcontrol>100</defaultcontrol>
-			<control type="list" id="100">
+			<control type="fixedlist" id="100">
 				<posx>85</posx>
 				<posy>30</posy>
 				<width>1750</width>
@@ -65,6 +65,22 @@
 						<label>[B][UPPERCASE]$INFO[ListItem.Label][/UPPERCASE][/B]</label>
 					</control>
 				</focusedlayout>
+			</control>
+			<control type="image">
+				<posx>85</posx>
+				<posy>0</posy>
+				<width>120</width>
+				<height>130</height>
+				<texture flipx="true">script-bluray-com-white_fade_left.png</texture>
+				<colordiffuse>FF000000</colordiffuse>
+			</control>
+			<control type="image">
+				<posx>1716</posx>
+				<posy>0</posy>
+				<width>120</width>
+				<height>130</height>
+				<texture>script-bluray-com-white_fade_left.png</texture>
+				<colordiffuse>FF000000</colordiffuse>
 			</control>
 		</control>
 	</controls>

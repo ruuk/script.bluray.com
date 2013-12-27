@@ -40,7 +40,7 @@
 				<posx>190</posx>
 				<posy>251</posy>
 				<width>1730</width>
-				<height>38</height>
+				<height>40</height>
 				<texture>script-bluray-com-white_square.png</texture>
 				<colordiffuse>FF000000</colordiffuse>
 			</control>
@@ -115,7 +115,7 @@
 						<height>38</height>
 						<font>font13</font>
 						<aligny>center</aligny>
-						<textcolor>FFA0A0A0</textcolor>
+						<textcolor>FF808080</textcolor>
 						<align>center</align>
 						<label>$INFO[ListItem.Label]</label>
 					</control>
@@ -168,9 +168,16 @@
 						<height>38</height>
 						<font>font13</font>
 						<aligny>center</aligny>
-						<textcolor>FFA0A0A0</textcolor>
+						<textcolor>FF808080</textcolor>
 						<align>center</align>
 						<label>$INFO[ListItem.Label]</label>
+					</control>
+					<control type="image">
+						<posx>543</posx>
+						<posy>10</posy>
+						<width>27</width>
+						<height>18</height>
+						<texture>$INFO[ListItem.Property(flag)]</texture>
 					</control>
 				</itemlayout>
 				<focusedlayout height="38">
@@ -197,6 +204,13 @@
 						<align>center</align>
 						<label>$INFO[ListItem.Label]</label>
 						<visible>!Control.HasFocus(101)</visible>
+					</control>
+					<control type="image">
+						<posx>543</posx>
+						<posy>10</posy>
+						<width>27</width>
+						<height>18</height>
+						<texture>$INFO[ListItem.Property(flag)]</texture>
 					</control>
 				</focusedlayout>
 			</control>

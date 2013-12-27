@@ -13,6 +13,7 @@ TR = {	'reviews':'Reviews',
 		'deals':'Deals',
 		'search':'Search',
 		'collection':'Collection',
+		'pricetracker':'Price Track',
 		'watched':'Watched',
 		'yes':'Yes'
 }
@@ -164,7 +165,7 @@ class DealsResult(ReviewsResult):
 class CollectionResult(ReviewsResult):
 	infoTags = ('runtime','studio','year','releasetimestamp')
 	def __init__(self,soupData,categoryid):
-		self.categoryid = categoryid
+		self.categoryID = categoryid
 		self.sortTitle = ''
 		self.json = {}
 		ReviewsResult.__init__(self, soupData)
@@ -200,8 +201,9 @@ class CollectionResult(ReviewsResult):
 	exclude: 1
 	'''
 	def processSoupData(self,json):
-		json['categoryid'] = self.categoryid
+		json['categoryid'] = self.categoryID
 		self.json = json
+		self.ID = json.get('pid')
 		self.title = json.get('title')
 		the = json.get('the')
 		if the: self.title = the + ' ' + self.title
@@ -243,12 +245,77 @@ class CollectionResult(ReviewsResult):
 		
 	def refresh(self):
 		self.processSoupData(self.json)
+	
+class PriceTrackingResult(ReviewsResult):
+	def __init__(self,soupData):
+		self.json = {}
+		self.itemID = ''
+		self.trackingID = ''
+		self.expireUnix = 0
+		self.categoryID = ''
+		self.countryCode = ''
 		
+		self.priceMatched = False
+		self.currency = '$'
+		self.retailer = ''
+		
+		self.price = ''
+		self.myPrice = ''
+		self.priceRange = ''
+		self.listPrice = ''
+		
+		ReviewsResult.__init__(self, soupData)
+			
+	def processSoupData(self,json):
+		self.json = json
+		self.ID = json.get('pid','')
+		self.title = json.get('title','')
+		self.icon = json.get('coverurl0','').replace('_small.','_medium.')
+		self.url = json.get('url','').replace('www','m')
+		self.categoryID = json.get('categoryid','')
+		self.trackingID = json.get('gpid','')
+		self.countryCode = json.get('countrycode','')
+		self.itemID = json.get('id','')
+		self.priceMatched = json.get('pricematch') == '1'
+		self.currency = json.get('currency','$')
+		self.retailer = json.get('retailer','')
+		try:
+			self.priceRange = int(json.get('pricerange',''))/100.0
+		except:
+			self.priceRange = 0
+		try:
+			self.price = int(json.get('price',''))/100.0
+		except:
+			self.price = 0
+		try:
+			self.myPrice = int(json.get('myprice',''))/100.0
+		except:
+			self.myprice = 0
+		try:
+			self.listPrice = int(json.get('listprice',''))/100.0
+		except:
+			self.listPrice
+		
+		myprice = '%s%.2f' % (self.currency,self.myPrice)
+		price = '%s%.2f' % (self.currency,self.price)
+		listprice = '%s%.2f' % (self.currency,self.listPrice)
+		self.description = '%s - %s at %s (List: %s)' % (myprice,price,self.retailer,listprice)
+		self.info = self.priceMatched and '[COLOR FF00AA00]Matched[/COLOR]' or ''
+		try:
+			self.expireUnix = int(json.get('expiretimestamp'))
+		except:
+			pass
+		
+	def refresh(self):
+		self.processSoupData(self.json)
+
 class Review(ReviewsResult):
 	_resultType = 'Review'
-	def __init__(self,soupData):
+	def __init__(self,soupData,url):
 		self.flagImage = ''
 		self.coverImage = ''
+		self.coverFront = ''
+		self.coverBack = ''
 		self.images = []
 		self.review = ''
 		self.overview = ''
@@ -262,6 +329,8 @@ class Review(ReviewsResult):
 		self.subheading2 = ''
 		self.owned = False
 		ReviewsResult.__init__(self, soupData)
+		self.url = url
+		self.ID = self.url.strip('/').rsplit('/')[-1]
 		
 	def processSoupData(self,soupData):
 		flagImg = soupData.find('img',{'src':lambda x: 'flags' in x})
@@ -286,7 +355,10 @@ class Review(ReviewsResult):
 			if len(subheadings) > 1: self.subheading2 = subheadings[1].getText().strip()
 		
 		coverImg = soupData.find('img',{'id':'frontimage_overlay'})
-		if coverImg: self.coverImage = coverImg.get('src','')
+		if coverImg:
+			self.coverImage = coverImg.get('src','')
+			self.coverFront = self.coverImage.replace('_medium','_front')
+			self.coverBack = self.coverImage.replace('_medium','_back')
 		
 		for p in soupData.findAll('p'):
 			p.replaceWith(p.getText() + '[CR]')
@@ -365,8 +437,29 @@ class BlurayComAPI:
 	apiLoginURL = 'http://m.blu-ray.com/api/userauth.php'
 	collectionURL = 'http://m.blu-ray.com/api/collection.json.php?categoryid={category}&imgsz=1&session={session_id}'
 	updateCollectableURL = 'http://m.blu-ray.com/api/updatecollectable.php'
+	deleteCollectableURL = 'http://m.blu-ray.com/api/deletefromcollection.php?productid={product_id}&categoryid=21&session={session_id}'
 	countriesURL = 'http://m.blu-ray.com/countries.json.php?_=1387933807086'
+	priceTrackerURL = 'http://www.blu-ray.com/community/pricetracker.php'
+	priceTrackerDeleteURL = 'http://www.blu-ray.com/community/pricetracker.php?action=delete&id={item_id}'
+	priceTrackerEditURL = 'http://www.blu-ray.com/community/pricetracker.php?action=edit&id={item_id}'
+	myPriceTrackerURL = 'http://m.blu-ray.com/api/pricetracker.php?session={session_id}&sortby=pricematch'
+	coverURL = 'http://images.static-bluray.com/movies/covers/{procuct_id}_front.jpg'
+	coverBackURL = 'http://images.static-bluray.com/movies/covers/{procuct_id}_back.jpg'
 	pageARG = 'page=%s'
+	
+	addToCollectionURL = 'http://m.blu-ray.com/api/addtocollection.php'
+	'''
+	session:       c8bc1cdaf86f4bf848d8f8dc51e15c22
+	productid:     1290
+	categoryid:    7
+	typeid:        1
+	dateadded:     1388102245
+	watched:       1
+	description:   
+	price:         0
+	pricecomment:  
+	dvc:           5
+	'''
 	
 	categories = (	(7,'Blu-ray'),
 					(21,'DVD'),
@@ -464,6 +557,7 @@ class BlurayComAPI:
 		cats = [(TR['reviews'],'','reviews'),(TR['releases'],'','releases'),(TR['deals'],'','deals'),(TR['search'],'','search')]
 		if self.canLogin():
 			cats.append((TR['collection'],'','collection'))
+			cats.append((TR['pricetracker'],'','pricetracker'))
 		return cats
 	
 	def getPaging(self,soupData):
@@ -532,7 +626,7 @@ class BlurayComAPI:
 		fixed = re.sub('</i>(?i)',' [/I]',fixed)
 		fixed = re.sub('<br[^>]*?>(?i)','[CR]',fixed)
 		soup = bs4.BeautifulSoup(fixed,self.parser,from_encoding=req.encoding)
-		return Review(soup)
+		return Review(soup,url)
 	
 	def getCollection(self,categories):
 		'''
@@ -622,6 +716,82 @@ class BlurayComAPI:
 		'''
 		req = requests.post(self.updateCollectableURL,data=data)
 		return not 'error' in req.json()
+		
+	def deleteCollectable(self,product_id):
+		if not self.apiLogin(): return
+		req = requests.get(self.deleteCollectableURL.format(product_id=product_id,session_id=self.sessionID))
+		return not 'error' in req.json()
+	
+	def getPriceTracking(self):
+		if not self.apiLogin(): return
+		items = []
+		req = requests.get(self.myPriceTrackerURL.format(session_id=self.sessionID))
+		json = req.json()
+		if not 'items' in json:
+			if not self.apiLogin(force=True): return []
+			req = requests.get(self.myPriceTrackerURL.format(session_id=self.sessionID))
+			json = req.json()
+			if not 'items' in json: return []
+		for i in json['items']:
+			items.append(PriceTrackingResult(i))
+				
+		return items
+	
+	def getTrackingIDWithURL(self,url):
+		url = url.replace('://m.','://www.')
+		soup = self.url2Soup(url)
+		try:
+			return soup.find('a',{'href':lambda x: 'pricetracker.php' in x and 'action=add' in x}).get('href').split('=')[-1]
+		except:
+			return ''
+			
+	def trackPrice(self,product_id,price,price_range=0,expiration=8,update_id=None):
+		'''
+		<input type="text" name="price_1" size="5" />
+		<input type="text" name="pricerange_1" size="5" value="3" />
+		<select name="expire_1" width="20%">
+			<option value="1">1 week</option>
+			<option value="2">1 month</option>
+			<option value="3">3 months</option>
+			<option value="4">6 months</option>
+			<option value="5">12 months</option>
+			<option value="6">3 years</option>
+			<option value="7">5 years</option>
+			<option value="8" selected>10 years</option>
+		</select>
+		<input type="hidden" name="action" value="add" />
+		<input type="hidden" name="p" value="237173" />
+		<input type="hidden" name="submit" value="1" />
+		'''
+		if not self.siteLogin(): return False
+		if update_id:
+			referer = 'http://www.blu-ray.com/community/pricetracker.php?action=edit&id=' + update_id
+			data = {	'action':'edit',
+						'submit':'1',
+						'id':update_id,
+						'price':price,
+						'pricerange':price_range,
+						'expire':expiration
+				}
+		else:
+			referer = 'http://www.blu-ray.com/community/pricetracker.php?action=add&p=' + product_id
+			data = {	'action':'add',
+						'submit':'Track!',
+						'p':product_id,
+						'price_1':price,
+						'pricerange_1':price_range,
+						'expire_1':expiration
+				}
+		headers = {'Referer': referer}
+		req = self.session().post(self.priceTrackerURL,data=data,headers=headers)
+		return req.ok
+	
+	def unTrackPrice(self,item_id):
+		if not self.siteLogin(): return False
+		referer = 'http://www.blu-ray.com/community/pricetracker.php'
+		headers = {'Referer': referer}
+		req = self.session().get(self.priceTrackerDeleteURL.format(item_id=item_id),headers=headers)
+		return req.ok
 		
 	def siteLogin(self,force=False):
 		'''

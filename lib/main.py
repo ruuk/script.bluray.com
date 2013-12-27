@@ -75,6 +75,8 @@ class BluRayCategories(xbmcgui.WindowXML):
 				openReviewsWindow(mode='DEALS')
 			elif item.getProperty('id') == 'collection':
 				openReviewsWindow(mode='COLLECTION')
+			elif item.getProperty('id') == 'pricetracker':
+				openReviewsWindow(mode='PRICETRACKER')
 			elif item.getProperty('id') == 'search':
 				openReviewsWindow(mode='SEARCH')
 				
@@ -85,6 +87,7 @@ class BluRayReviews(BaseWindowDialog):
 		self.currentResults = []
 		self.idxOffset = 0
 		self.hasSearched = False
+		self.lastCategory=None
 	
 	def onInit(self):
 		self.reviewList = self.getControl(101)
@@ -108,14 +111,10 @@ class BluRayReviews(BaseWindowDialog):
 		else:
 			return [default]
 	
-	def getCollectionCategoriesToShow(self,ids=False):
+	def getCollectionCategoriesToShow(self):
 		cats = []
-		if ids:
-			for ID,cat in API.categories:
-				if getSetting('used_cat_%d' % ID,False): cats.append(ID)
-		else:
-			for ID,cat in API.categories:
-				if getSetting('used_cat_%d' % ID,False): cats.append(cat)
+		for ID,cat in API.categories:
+			if getSetting('used_cat_%d' % ID,False): cats.append((ID,cat))
 		return cats
 
 	def showReviews(self,page=0,category=None):
@@ -147,6 +146,10 @@ class BluRayReviews(BaseWindowDialog):
 				results, paging = API.getDeals(page)
 			elif self.mode == 'COLLECTION':
 				results = API.getCollection(categories=self.getCollectionCategories(category))
+				self.lastCategory = category
+				self.currentResults = results
+			elif self.mode == 'PRICETRACKER':
+				results = API.getPriceTracking()
 				self.currentResults = results
 			else:
 				results, paging = API.getReviews(page)
@@ -196,30 +199,73 @@ class BluRayReviews(BaseWindowDialog):
 				
 	def doMenu(self):
 		if self.mode == 'COLLECTION':
-			items = ['All']
-			for cat in self.getCollectionCategoriesToShow(): # @UnusedVariable
-				items.append(cat)
-			items.append('Toggle Watched')
-			idx = xbmcgui.Dialog().select('Category',items)
+			m = ChoiceList(T(32028))
+			m.addItem('all','All')
+			for cat_id, cat in self.getCollectionCategoriesToShow(): # @UnusedVariable
+				m.addItem(cat_id,cat)
+			m.addItem('remove','Remove')
+			m.addItem('toggle_watched','Toggle Watched')
+			ID = m.getResult()
+			if ID is None: return
+			if ID == 'all':
+				self.refresh(category=0)
+			elif ID == 'toggle_watched':
+				self.toggleWatched()
+			elif ID == 'remove':
+				self.removeFromCollection()
+			else:
+				self.refresh(category=ID)
+		elif self.mode == 'PRICETRACKER':
+			items = ['Remove','Edit']
+			idx = xbmcgui.Dialog().select(T(32028),items)
 			if idx < 0: return
 			if idx == 0:
-				self.refresh(category=0)
-			elif idx == len(items) - 1:
-				self.toggleWatched()
-			else:
-				self.refresh(category=self.getCollectionCategoriesToShow(ids=True)[idx-1])
+				self.unTrackPrice()
+			elif idx == 1:
+				self.editTrackPrice()
+				
 		elif self.mode == 'SEARCH':
 			self.showReviews()
 
+	def getCurrentItemResult(self):
+		idx = self.reviewList.getSelectedPosition()
+		if idx < self.idxOffset: return
+		idx += self.idxOffset
+		if idx > len(self.currentResults): return
+		result = self.currentResults[idx]
+		return result
+			
+	def unTrackPrice(self):
+		self.loadingOn()
+		succeeded = False
+		try:
+			result = self.getCurrentItemResult()
+			if not result: return
+			succeeded = API.unTrackPrice(result.itemID)
+		finally:
+			self.loadingOff()
+			
+		if succeeded:
+			self.refresh()
+			
+	def editTrackPrice(self):
+		self.loadingOn()
+		try:
+			result = self.getCurrentItemResult()
+			if not result: return
+			succeeded = trackPrice(result.trackingID,result.itemID,price=result.myPrice)
+		finally:
+			self.loadingOff()
+			
+		if succeeded:
+			self.refresh()
+	
 	def toggleWatched(self):
 		self.loadingOn()
 		succeeded = False
 		try:
-			idx = self.reviewList.getSelectedPosition()
-			if idx < self.idxOffset: return
-			idx += self.idxOffset
-			if idx > len(self.currentResults): return
-			result = self.currentResults[idx]
+			result = self.getCurrentItemResult()
+			if not result: return
 			result.json['watched'] = result.json.get('watched') != '1' and '1' or ''
 			succeeded = API.updateCollectable(result.json)
 		finally:
@@ -231,6 +277,21 @@ class BluRayReviews(BaseWindowDialog):
 			self.setUpItem(item, result)
 			self.setFocus(self.reviewList)
 		
+	def removeFromCollection(self):
+		result = self.getCurrentItemResult()
+		if not result: return
+		yes = xbmcgui.Dialog().yesno('Really Delete?','Really remove:',result.title,'from your collection?')
+		if not yes: return
+		self.loadingOn()
+		succeeded = False
+		try:
+			succeeded = API.deleteCollectable(result.ID)
+		finally:
+			self.loadingOff()
+			
+		if succeeded:
+			self.refresh(category=self.lastCategory)
+
 	def onClick(self,controlID):
 		if controlID == 101:
 			item = self.reviewList.getSelectedItem()
@@ -254,6 +315,7 @@ class BluRayReview(BaseWindowDialog):
 	def __init__(self,*args,**kwargs):
 		BaseWindowDialog.__init__(self)
 		self.url = kwargs.get('url')
+		self.review = None
 		
 	def onInit(self):
 		self.imagesList = self.getControl(102)
@@ -275,6 +337,7 @@ class BluRayReview(BaseWindowDialog):
 		self.loading.setVisible(True)
 		try:
 			review = API.getReview(self.url)
+			self.review = review
 			self.setProperty('title', review.title)
 			self.setProperty('subheading1', review.subheading1)
 			self.setProperty('subheading2', review.subheading2)
@@ -291,6 +354,11 @@ class BluRayReview(BaseWindowDialog):
 				item.setProperty('1080p',url_1080p)
 				items.append(item)
 			ct = 0
+			item = xbmcgui.ListItem()
+			item.setProperty('front',review.coverImage or 'script-bluray-com-no_cover.png')
+			item.setProperty('frontLarge',review.coverFront or 'script-bluray-com-no_cover.png')
+			item.setProperty('back',review.coverBack or 'script-bluray-com-no_cover.png')
+			items.append(item)
 			for source, url in review.historyGraphs:  # @UnusedVariable
 				url = imageToCache(url,'graph%s.png' % ct)
 				item = xbmcgui.ListItem(iconImage=url)
@@ -327,11 +395,18 @@ class BluRayReview(BaseWindowDialog):
 			self.setFocus(self.imagesList)
 			self.setFocusId(200)
 		
+	def doMenu(self):
+		items = [T(32027)]
+		idx = xbmcgui.Dialog().select(T(32028),items)
+		if idx < 0: return
+		if idx == 0:
+			trackPrice(API.getTrackingIDWithURL(self.review.url))
+	
 	def onClick(self,controlID):
 		if controlID == 102:
 			item = self.imagesList.getSelectedItem()
 			if not item: return
-			openWindow(ImageViewer, 'bluray-com-image.xml',url=item.getProperty('1080p'))
+			openWindow(ImageViewer, 'bluray-com-image.xml',url=item.getProperty('1080p'),front=item.getProperty('frontLarge'),back=item.getProperty('back'))
 		elif controlID == 134:
 			item = self.altList.getSelectedItem()
 			if not item: return
@@ -343,6 +418,8 @@ class BluRayReview(BaseWindowDialog):
 		try:
 			if action == 9 or action == 10:
 				self.doClose()
+			elif action == 117:
+				self.doMenu()
 		finally:
 			BaseWindowDialog.onAction(self,action)
 			
@@ -425,13 +502,19 @@ class BluRaySearch(BaseWindowDialog):
 			BaseWindowDialog.onAction(self,action)
 			
 
-class ImageViewer(xbmcgui.WindowXMLDialog):
+class ImageViewer(BaseWindowDialog):
 	def __init__(self,*args,**kwargs):
-		self.url = kwargs.get('url')
-		xbmcgui.WindowXML.__init__(self)
+		BaseWindowDialog.__init__(self)
+		self.url = kwargs.get('url','')
+		self.front = kwargs.get('front','')
+		self.back = kwargs.get('back','')
 		
 	def onInit(self):
-		self.getControl(150).setImage(self.url)
+		self.setProperty('image',self.url)
+		self.setProperty('front',self.front)
+		self.setProperty('back',self.back)
+		
+		self.setProperty('show_images','1')
 		
 	def onAction(self,action):
 		try:
@@ -439,6 +522,44 @@ class ImageViewer(xbmcgui.WindowXMLDialog):
 				self.close()
 		finally:
 			xbmcgui.WindowXMLDialog.onAction(self,action)
+
+class ChoiceList:
+	def __init__(self,caption=''):
+		self.caption = caption
+		self.items = []
+		
+	def addItem(self,ID,label):
+		self.items.append({'id':ID,'label':label})
+		
+	def getResult(self):
+		items = []
+		for i in self.items: items.append(i['label'])
+		idx = xbmcgui.Dialog().select(self.caption,items)
+		if idx < 0: return None
+		return self.items[idx]['id']
+			
+def doKeyboard(heading,default='',hidden=False):
+	key = xbmc.Keyboard(default,heading,hidden)
+	key.doModal()
+	if not key.isConfirmed(): return None
+	return key.getText()
+
+def trackPrice(product_id,update_id=None,price='19.99'):
+	if not product_id:
+		LOG('trackPrice(): No product ID')
+		return
+	while price != None:
+		price = doKeyboard('Enter Price',str(price))
+		try:
+			float(price)
+			if not '.' in price: raise Exception()
+			break
+		except:
+			pass
+	if not price: return
+	price_range = '0'
+	expiration = '8'
+	return API.trackPrice(product_id, price, price_range, expiration,update_id)
 
 def getSetting(key,default=None):
 	setting = ADDON.getSetting(key)
@@ -488,14 +609,14 @@ def openWindow(window_class,xml_file,return_window=False,**kwargs):
 	
 def main():
 	global API
-	bluraycomapi.TR = {	'reviews':T(32001),
-						'releases':T(32002),
-						'deals':T(32003),
-						'search':T(32004),
-						'collection':T(32010),
-						'watched':T(32011),
-						'yes':T(32012)
-	}
+	bluraycomapi.TR.update({	'reviews':T(32001),
+								'releases':T(32002),
+								'deals':T(32003),
+								'search':T(32004),
+								'collection':T(32010),
+								'watched':T(32011),
+								'yes':T(32012)
+							})
 	API = bluraycomapi.BlurayComAPI()
 	updateUserPass()
 	openWindow(BluRayCategories,'bluray-com-categories.xml')

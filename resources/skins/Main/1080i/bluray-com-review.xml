@@ -103,8 +103,27 @@
 						<posy>10</posy>
 						<width>350</width>
 						<height>197</height>
-						<aspectratio align="left'">keep</aspectratio>
+						<aspectratio>keep</aspectratio>
 						<texture>$INFO[ListItem.Icon]</texture>
+					</control>
+					<control type="group">
+						<visible>StringCompare(ListItem.Icon,)</visible>
+						<control type="image">
+							<posx>30</posx>
+							<posy>10</posy>
+							<width>170</width>
+							<height>197</height>
+							<aspectratio align="left">keep</aspectratio>
+							<texture fallback="script-bluray-com-no_cover.png">$INFO[ListItem.Property(front)]</texture>
+						</control>
+						<control type="image">
+							<posx>210</posx>
+							<posy>10</posy>
+							<width>170</width>
+							<height>197</height>
+							<aspectratio align="right">keep</aspectratio>
+							<texture fallback="script-bluray-com-no_cover.png">$INFO[ListItem.Property(back)]</texture>
+						</control>
 					</control>
 				</itemlayout>
 				<focusedlayout height="217">
@@ -122,8 +141,27 @@
 						<posy>10</posy>
 						<width>350</width>
 						<height>197</height>
-						<aspectratio align="left'">keep</aspectratio>
+						<aspectratio>keep</aspectratio>
 						<texture>$INFO[ListItem.Icon]</texture>
+					</control>
+					<control type="group">
+						<visible>StringCompare(ListItem.Icon,)</visible>
+						<control type="image">
+							<posx>30</posx>
+							<posy>10</posy>
+							<width>170</width>
+							<height>197</height>
+							<aspectratio align="left">keep</aspectratio>
+							<texture fallback="script-bluray-com-no_cover.png">$INFO[ListItem.Property(front)]</texture>
+						</control>
+						<control type="image">
+							<posx>210</posx>
+							<posy>10</posy>
+							<width>170</width>
+							<height>197</height>
+							<aspectratio align="right">keep</aspectratio>
+							<texture fallback="script-bluray-com-no_cover.png">$INFO[ListItem.Property(back)]</texture>
+						</control>
 					</control>
 				</focusedlayout>
 			</control>

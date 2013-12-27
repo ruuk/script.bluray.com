@@ -113,4 +113,11 @@ msgctxt "#32026"
 msgid "Enter Password"
 msgstr ""
 
+msgctxt "#32027"
+msgid "Track Price"
+msgstr ""
+
+msgctxt "#32028"
+msgid "Options"
+msgstr ""
 
