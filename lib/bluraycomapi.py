@@ -32,6 +32,7 @@ def minsToDuration(mins):
 class ResultItem:
 	_resultType = 'None'
 	_hr = '[COLOR FF606060]%s[/COLOR]' % ('_' * 200)
+	headerColor = 'FF0080D0'
 	
 	def __init__(self,soupData):
 		self.title = ''
@@ -48,8 +49,12 @@ class ResultItem:
 	def convertTable(self,soup,table,sep=' '):
 		if not table: return
 		text = '[CR]'
-		for td in table.findAll('tr'):
-			text += td.getText(separator=sep) + '[CR]'
+		for tr in table.findAll('tr'):
+			tds = []
+			for td in tr.findAll('td'):
+				tdtext = td.getText(strip=True).replace('[CR]',', ')
+				if tdtext: tds.append(tdtext)
+			text += sep.join(tds).strip() + '[CR]'
 		tag = soup.new_tag('p')
 		tag.string = text
 		table.replaceWith(tag)
@@ -62,14 +67,17 @@ class ResultItem:
 		tag.string = text
 		ul.replaceWith(tag)
 		
-	def convertHeaders(self,soup,tag):
-		for h3 in tag.findAll('h3'):
+	def convertHeaders(self,soup,tag,h='h3',no_cr=False):
+		for h3 in tag.findAll(h):
 			for i in h3.findAll('img'):
 				tag = soup.new_tag('p')
 				tag.string = i.get('alt','')
 				i.replaceWith(tag)
 			h3r = soup.new_tag('p')
-			h3r.string = '[CR][COLOR FF0080D0][B]%s[/B][/COLOR][CR]' % h3.getText(strip=True)
+			if no_cr:
+				h3r.string = '[COLOR %s][B]%s[/B][/COLOR]' % (self.headerColor,h3.getText(strip=True))
+			else:
+				h3r.string = '[CR][COLOR %s][B]%s[/B][/COLOR][CR]' % (self.headerColor,h3.getText(strip=True))
 			h3.replaceWith(h3r)
 			
 	def cleanWhitespace(self,text):
@@ -167,6 +175,8 @@ class CollectionResult(ReviewsResult):
 	def __init__(self,soupData,categoryid):
 		self.categoryID = categoryid
 		self.sortTitle = ''
+		self.originalURL = ''
+		self.watched = False
 		self.json = {}
 		ReviewsResult.__init__(self, soupData)
 		
@@ -205,21 +215,26 @@ class CollectionResult(ReviewsResult):
 		self.json = json
 		self.ID = json.get('pid')
 		self.title = json.get('title')
+		self.watched = json.get('watched') == '1'
 		the = json.get('the')
 		if the: self.title = the + ' ' + self.title
 		self.icon = json.get('coverurl0')
-		self.url = json.get('url').replace('www','m')
-		rating = json.get('rating')
-		self.sortTitle = json.get('titlesort',self.title) 
-		try:
-			self.ratingImage = 'http://www.blu-ray.com/images/rating/b%s.jpg' % (int(float(rating)) or '0')
-		except:
-			pass
-		self.info = json.get('year','') + ' | ' + json.get('reldate','')
-		try:
-			self.rating = 'Overall: %.1f of 5' % (round(round(float(rating)/2,1)*2)/2)
-		except:
-			pass
+		self.originalURL = json.get('url').replace('//ww.','//www.')
+		self.url = self.originalURL
+		if str(self.categoryID) in ('7','21'):
+			self.url = self.originalURL.replace('www','m')
+		self.sortTitle = json.get('titlesort',self.title)
+		rating = json.get('rating','')
+		if rating:
+			try:
+				self.ratingImage = 'script-bluray-com-stars_%s.png' % (int((round(float(rating) * 2)/2)*10) or '0')
+			except:
+				pass
+			self.info = json.get('year','') + ' | ' + json.get('reldate','')
+			try:
+				self.rating = 'Rating: %.1f' % float(rating)
+			except:
+				pass
 		self.info = ''
 		infos = []
 		for tag in self.infoTags:
@@ -263,6 +278,7 @@ class PriceTrackingResult(ReviewsResult):
 		self.myPrice = ''
 		self.priceRange = ''
 		self.listPrice = ''
+		self.originalURL = ''
 		
 		ReviewsResult.__init__(self, soupData)
 			
@@ -271,8 +287,11 @@ class PriceTrackingResult(ReviewsResult):
 		self.ID = json.get('pid','')
 		self.title = json.get('title','')
 		self.icon = json.get('coverurl0','').replace('_small.','_medium.')
-		self.url = json.get('url','').replace('www','m')
 		self.categoryID = json.get('categoryid','')
+		self.originalURL = json.get('url').replace('//ww.','//www.')
+		self.url = self.originalURL
+		if str(self.categoryID) in ('7','21'):
+			self.url = self.originalURL.replace('www','m')
 		self.trackingID = json.get('gpid','')
 		self.countryCode = json.get('countrycode','')
 		self.itemID = json.get('id','')
@@ -336,7 +355,7 @@ class Review(ReviewsResult):
 		flagImg = soupData.find('img',{'src':lambda x: 'flags' in x})
 		if flagImg: self.flagImage = flagImg.get('src','')
 		
-		self.owned = bool(soupData.find('a',{'href':lambda x: '/collection.php' in x})) #TODO: Login so we can actually get this to work
+		self.owned = bool(soupData.find('a',{'href':lambda x: '/collection.php' in x}))
 		
 		for i in soupData.findAll('img',{'id':'reviewScreenShot'}):
 			src = i.get('src','')
@@ -424,7 +443,78 @@ class Review(ReviewsResult):
 		self.convertHeaders(soupData, section)
 		for li in section.findAll('li'):
 			self.similarTitles.append((li.find('a').get('href'),li.find('img').get('src'),removeColorTags(li.getText())))
+			
+class GameReview(Review):
+	_resultType = 'GameReview'
+	def __init__(self,soupData, reviewSoupData, url):
+		self.reviewSoupData = reviewSoupData
+		Review.__init__(self, soupData, url)
 		
+	def processSoupData(self,soupData):
+		self.owned = bool(soupData.find('a',{'href':lambda x: x and ('/collection.php' in x) and ('action=showcategory' in x)}))		
+		self.title = soupData.find('title').getText(strip=True)
+		
+		flagImg = soupData.find('img',{'src':lambda x: 'flags' in x})
+		if flagImg: self.flagImage = flagImg.get('src','')
+		
+		subheading = soupData.find('span',{'class':'subheading'})
+		if subheading: self.subheading1 = subheading.getText().strip()
+		
+		coverImg = soupData.find('img',{'id':'productimage'})
+		if coverImg:
+			self.coverImage = coverImg.get('src','')
+			self.coverFront = self.coverImage.replace('_medium','_large')
+			self.coverBack = ''
+		
+		for p in soupData.findAll('p'):
+			p.replaceWith(p.getText() + '[CR]')
+			
+		specH3 = soupData.find('h3',text='Specifications')
+		if specH3:
+			for sibling in specH3.next_siblings:
+				if sibling.name == 'table':
+					self.convertHeaders(soupData, sibling, 'h5')
+					for table in sibling.findAll('table'):
+						self.convertTable(soupData, table, ': ')
+					self.specifications = ('[COLOR %s][B]Specifications[/B][/COLOR][CR]' % self.headerColor) + self.cleanWhitespace(sibling.getText())
+					break
+			
+		price_rating = soupData.find('td',{'width':'35%'})
+		if price_rating:
+			price = '[COLOR %s][B]Price[/B][/COLOR][CR]' % self.headerColor
+			for c in price_rating.children:
+				if c.name == 'h3':
+					break
+				elif c.name in ('br','div'):
+					price += '[CR]'
+				elif not c.name:
+					text = c.string.strip()
+					if text: price += text + ' '
+				else:
+					text = c.getText(strip=True)
+					if text: price += text + ' '
+			price = self.cleanWhitespace(price)
+			while price.endswith('[CR]'): price = price[:-4]
+			self.price = price
+			self.getReviews()		
+
+	def getReviews(self):
+		rating = self.reviewSoupData.find('div',{'id':'ratingscore'}) or ''
+		if rating:
+			if rating.string == '0':
+				rating = ''
+			else:
+				rating = 'Rating: %s[CR][CR]' % rating.string
+		for tag in self.reviewSoupData.find('h3',text='Post a review').previous_siblings:
+			if tag.name == 'table':
+				self.convertHeaders(self.reviewSoupData, tag, 'h5',no_cr=True)
+				self.review = rating + self.cleanWhitespace(tag.getText().strip())
+				break
+			elif 'No user reviews' in tag.string:
+				self.review = rating + 'No Reviews'
+				break
+		del self.reviewSoupData
+
 def removeColorTags(text):
 	return re.sub('\[/?COLOR[^\]]*?\]','',text)
 	
@@ -610,9 +700,7 @@ class BlurayComAPI:
 			items.append(ReviewsResult(i))
 		return (items,self.getPaging(soup))
 	
-	def getReview(self,url):
-		req = self.session().get(url)
-		
+	def makeReviewSoup(self,req):
 		fixed = ''
 		for line in req.text.splitlines():
 			if not line.strip(): continue
@@ -625,8 +713,16 @@ class BlurayComAPI:
 		fixed = re.sub('<i>(?i)','[I]',fixed)
 		fixed = re.sub('</i>(?i)',' [/I]',fixed)
 		fixed = re.sub('<br[^>]*?>(?i)','[CR]',fixed)
-		soup = bs4.BeautifulSoup(fixed,self.parser,from_encoding=req.encoding)
-		return Review(soup,url)
+		return bs4.BeautifulSoup(fixed,self.parser,from_encoding=req.encoding)
+	
+	def getReview(self,url):
+		req = self.session().get(url)
+		soup = self.makeReviewSoup(req)
+		if '/www.' in url:
+			soup2 = self.makeReviewSoup(self.session().get(url + '?show=userreviews'))
+			return GameReview(soup,soup2,url)
+		else:
+			return Review(soup,url)
 	
 	def getCollection(self,categories):
 		'''

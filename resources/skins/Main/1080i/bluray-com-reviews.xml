@@ -17,7 +17,7 @@
 				<width>1920</width>
 				<height>950</height>
 				<texture>script-bluray-com-white_square.png</texture>
-				<colordiffuse>FFB8C0D0</colordiffuse>
+				<colordiffuse>FFCFDBE5</colordiffuse>
 			</control>
 		</control>
 		<control type="group" id="200">

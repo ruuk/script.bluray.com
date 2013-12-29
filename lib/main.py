@@ -103,6 +103,7 @@ class BluRayReviews(BaseWindowDialog):
 			default = category
 		else:
 			default = getSetting('default_collection',0)
+			if default > 0: default = API.categories[default-1][0]
 		if default == 0:
 			cats = []
 			for ID,cat in API.categories:  # @UnusedVariable
@@ -200,23 +201,30 @@ class BluRayReviews(BaseWindowDialog):
 	def doMenu(self):
 		if self.mode == 'COLLECTION':
 			m = ChoiceList(T(32028))
-			m.addItem('all','All')
+			m.addItem('all',T(32031))
 			for cat_id, cat in self.getCollectionCategoriesToShow(): # @UnusedVariable
 				m.addItem(cat_id,cat)
-			m.addItem('remove','Remove')
-			m.addItem('toggle_watched','Toggle Watched')
+			result = self.getCurrentItemResult()
+			if result:
+				m.addItem('remove',T(32029))
+				if result.watched:
+					m.addItem('unmarkwatched',T(32033))
+				else:
+					m.addItem('markwatched',T(32032))
 			ID = m.getResult()
 			if ID is None: return
 			if ID == 'all':
 				self.refresh(category=0)
-			elif ID == 'toggle_watched':
-				self.toggleWatched()
+			elif ID == 'markwatched':
+				self.toggleWatched(True)
+			elif ID == 'unmarkwatched':
+				self.toggleWatched(False)
 			elif ID == 'remove':
 				self.removeFromCollection()
 			else:
 				self.refresh(category=ID)
 		elif self.mode == 'PRICETRACKER':
-			items = ['Remove','Edit']
+			items = [T(32029),T(32030)]
 			idx = xbmcgui.Dialog().select(T(32028),items)
 			if idx < 0: return
 			if idx == 0:
@@ -260,13 +268,16 @@ class BluRayReviews(BaseWindowDialog):
 		if succeeded:
 			self.refresh()
 	
-	def toggleWatched(self):
+	def toggleWatched(self,watched=None):
 		self.loadingOn()
 		succeeded = False
 		try:
 			result = self.getCurrentItemResult()
 			if not result: return
-			result.json['watched'] = result.json.get('watched') != '1' and '1' or ''
+			if watched is None:
+				result.json['watched'] = result.json.get('watched') != '1' and '1' or ''
+			else:
+				result.json['watched'] = watched and '1' or ''
 			succeeded = API.updateCollectable(result.json)
 		finally:
 			self.loadingOff()
@@ -346,7 +357,7 @@ class BluRayReview(BaseWindowDialog):
 			self.setProperty('owned',review.owned and T(32019) or '')
 			self.reviewText.setText(review.review)
 			
-			self.infoText.setText(('[CR][B]%s[/B][CR]' % ('_' * 200)).join((review.price,review.blurayRating,review.overview,review.specifications)))
+			self.infoText.setText(('[CR][B]%s[/B][CR]' % ('_' * 200)).join(filter(bool,[review.price,review.blurayRating,review.overview,review.specifications])))
 			
 			items = []
 			for url,url_1080p in review.images:
