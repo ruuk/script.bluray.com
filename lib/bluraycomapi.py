@@ -227,7 +227,7 @@ class CollectionResult(ReviewsResult):
 		rating = json.get('rating','')
 		if rating:
 			try:
-				self.ratingImage = 'script-bluray-com-stars_%s.png' % (int((round(float(rating) * 2)/2)*10) or '0')
+				self.ratingImage = 'rating/script-bluray-com-stars_%s.png' % (int((round(float(rating) * 2)/2)*10) or '0')
 			except:
 				pass
 			self.info = json.get('year','') + ' | ' + json.get('reldate','')
