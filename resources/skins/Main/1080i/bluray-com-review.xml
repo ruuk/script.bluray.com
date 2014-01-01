@@ -194,7 +194,8 @@
 				<visible>Control.IsVisible(130)</visible>
 			</control>
 			<control type="group">
-				<animation effect="slide" end="-840,0" time="200" condition="Control.HasFocus(133) | Control.HasFocus(134)">Conditional</animation>
+				<animation effect="slide" end="-840,0" time="200" condition="Control.IsVisible(300) + [Control.HasFocus(133) | Control.HasFocus(134)]">Conditional</animation>
+				<animation effect="slide" end="-740,0" time="200" condition="!Control.IsVisible(300) + [Control.HasFocus(133) | Control.HasFocus(134)]">Conditional</animation>
 				<posx>1670</posx>
 				<posy>130</posy>
 				<control type="image">
@@ -241,7 +242,8 @@
 					<visible>Control.IsVisible(132)</visible>
 				</control>
 			</control>
-			<control type="group">
+			<control type="group" id="300">
+				<visible>StringCompare(Window.Property(has_other),1)</visible>
 				<animation effect="slide" end="-480,0" time="200" condition="Control.HasFocus(134)">Conditional</animation>
 				<posx>1820</posx>
 				<posy>130</posy>

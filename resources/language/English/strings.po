@@ -141,3 +141,11 @@ msgctxt "#32033"
 msgid "Un-mark Watched"
 msgstr ""
 
+msgctxt "#32034"
+msgid "Categories Included In All"
+msgstr ""
+
+msgctxt "#32035"
+msgid "Enter Search Terms"
+msgstr ""
+

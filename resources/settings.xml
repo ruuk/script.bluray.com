@@ -6,6 +6,7 @@
 	</category>
 	<category label="32022">
 		<setting id="default_collection" type="enum" label="32020" values="All|Blu-ray|DVD|PS3|PS4|XBox 360|XBox One|Wii|Wii U|Movies|UltraViolet|Amazon|iTunes" default="0" />
+		<setting label="32034" type="lsep" />
 		<setting id="all_cat_7" type="bool" label="Blu-ray" default="true" />
 		<setting id="all_cat_21" type="bool" label="DVD" default="false" />
 		<setting id="all_cat_16" type="bool" label="PS3" default="false" />

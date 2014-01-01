@@ -48,16 +48,21 @@ class ResultItem:
 	
 	def convertTable(self,soup,table,sep=' '):
 		if not table: return
-		text = '[CR]'
+		text = '[CR]' + self.getTableData(table, sep)
+		tag = soup.new_tag('p')
+		tag.string = text
+		table.replaceWith(tag)
+		
+	def getTableData(self,table,sep=' '):
+		if not table: return
+		text = ''
 		for tr in table.findAll('tr'):
 			tds = []
 			for td in tr.findAll('td'):
 				tdtext = td.getText(strip=True).replace('[CR]',', ')
 				if tdtext: tds.append(tdtext)
 			text += sep.join(tds).strip() + '[CR]'
-		tag = soup.new_tag('p')
-		tag.string = text
-		table.replaceWith(tag)
+		return text
 		
 	def convertUL(self,soup,ul):
 		text = '[CR]'
@@ -67,22 +72,59 @@ class ResultItem:
 		tag.string = text
 		ul.replaceWith(tag)
 		
+	def setURL(self,url,catID):
+		self.originalURL = url.replace('//ww.','//www.')
+		self.url = self.originalURL
+		if str(catID) in ('7','21'):
+			self.url = self.originalURL.replace('www','m')
+		
 	def convertHeaders(self,soup,tag,h='h3',no_cr=False):
 		for h3 in tag.findAll(h):
 			for i in h3.findAll('img'):
-				tag = soup.new_tag('p')
-				tag.string = i.get('alt','')
-				i.replaceWith(tag)
+				i.replaceWith(i.get('alt',''))
 			h3r = soup.new_tag('p')
 			if no_cr:
-				h3r.string = '[COLOR %s][B]%s[/B][/COLOR]' % (self.headerColor,h3.getText(strip=True))
+				h3r.string = '[COLOR %s][B]%s[/B][/COLOR]' % (self.headerColor,h3.getText().strip())
 			else:
-				h3r.string = '[CR][COLOR %s][B]%s[/B][/COLOR][CR]' % (self.headerColor,h3.getText(strip=True))
+				h3r.string = '[CR][COLOR %s][B]%s[/B][/COLOR][CR]' % (self.headerColor,h3.getText().strip())
 			h3.replaceWith(h3r)
 			
+	def convertBR(self,tag):
+		for t in tag.findAll('br'): t.insert_after('[CR]')
+		
+	def replaceFlags(self,soup,tag):
+		for img in tag.findAll('img',{'src':lambda x: x and '/flags/' in x}):
+			new = soup.new_tag('span')
+			new.string = '(%s) ' % img.get('src','').rsplit('.',1)[0].rsplit('/',1)[-1]
+			img.replaceWith(new)
+		
+	_excessiveNL = re.compile('(?:\s*\[CR\]\s*){3,}')
 	def cleanWhitespace(self,text):
-		return re.sub('\[CR\]\s+','[CR]',text).strip()
-			
+		text = text.strip()
+		while text.startswith('[CR]'): text = text[4:].lstrip()
+		while text.endswith('[CR]'): text = text[:-4].rstrip()
+		text = self._excessiveNL.sub('[CR][CR]',text)	
+		return re.sub('\[CR\]\s+','[CR]',text)
+	
+	_URLRatingRE = re.compile('/b(\d0?)\.jpg')
+	def extractRatingNumber(self,url):
+		try:
+			return self._URLRatingRE.search(url).group(1)
+		except:
+			return '0'
+	
+	_percentRE = re.compile('(?<!\d)(1?\d{1,2}%)')
+	def colorPercents(self,text):
+		return self._percentRE.sub(r'[COLOR FFFFCCCC]\1[/COLOR]',text)
+	
+	_priceRE = re.compile('(\$\d*\.\d{2})')
+	def colorPrices(self,text):
+		return self._priceRE.sub(r'[COLOR FFCCFFCC]\1[/COLOR]',text)
+	
+	_ratingRE = re.compile('(?<!\d)(1?\d\.\d)(?!\d)')
+	def colorRatings(self,text):
+		return self._ratingRE.sub(r'[COLOR FFCCCCFF]\1[/COLOR]',text)
+	
 class ReviewsResult(ResultItem):
 	_resultType = 'ReviewsResult'
 	
@@ -101,12 +143,12 @@ class ReviewsResult(ResultItem):
 		
 	def processSoupData(self,soupData):
 		self.title = soupData.find('h3').getText().strip()
-		flagImg = soupData.find('img',{'src':lambda x: 'flag' in x})
+		flagImg = soupData.find('img',{'src':lambda x: '/flag/' in x})
 		if flagImg: self.flagImage = flagImg.get('src','')
 		images = soupData.findAll('img')
 		self.icon = images[0].get('src')
 		self.rating = images[-1].get('alt')
-		self.ratingImage = images[-1].get('src')
+		self.ratingImage = 'rating/script-bluray-com-brating_%s.png' % self.extractRatingNumber(images[-1].get('src'))
 		data = soupData.findAll('p',text=True)
 		try:
 			self.info = data[-3].text
@@ -121,18 +163,59 @@ class ReviewsResult(ResultItem):
 		self.ID = self.url.strip('/').rsplit('/')[-1]
 
 class ReviewsResultJSON(ReviewsResult):
+	def __init__(self,soupData,catID):
+		self.categoryID = catID
+		ReviewsResult.__init__(self, soupData)
+		
 	def processSoupData(self,json):
 		self.title = json.get('title','')
-		self.url = json.get('url','')
-		self.icon = json.get('cover','')
+		self.ID = json.get('pid','')
+		self.trackingID = json.get('gpid','')
+		self.setURL(json.get('url',''), self.categoryID)
+		if not self.ID: self.ID = self.url.strip('/').rsplit('/')[-1]
+		catID = str(self.categoryID)
+		if catID in BlurayComAPI.coverURLs:
+			self.icon = BlurayComAPI.coverURLs[catID].format(id=self.ID,size='medium')
+		else:
+			self.icon = json.get('cover',json.get('coverurl0',''))
+		if catID == '24': #Ultraviolet urls don't translate properly
+			urlName = self.url.rsplit('-Blu-ray/')[0].rsplit('/')[-1]
+			self.url = BlurayComAPI.pageURLs[catID].format(urlname=urlName,id=self.ID)
+		elif catID in BlurayComAPI.pageURLs:
+			self.url = BlurayComAPI.pageURLs[catID].format(id=self.ID)
 		self.flagImage = json.get('flag','')
 		rating = json.get('rating','')
-		self.ratingImage = 'http://www.blu-ray.com/images/rating/b%s.jpg' % (rating or '0')
-		self.info = json.get('year','') + ' | ' + json.get('reldate','')
 		try:
-			self.rating = 'Overall: %.1f of 5' % (int(rating)/2.0)
+			rating = int(rating)
+			self.ratingImage = 'rating/script-bluray-com-brating_%s.png' % rating
+			self.rating = 'Overall: %.1f of 5' % (rating/2.0)
 		except:
-			pass
+			try:
+				self.ratingImage = 'rating/script-bluray-com-stars_%s.png' % (int((round(float(rating) * 2)/2)*10) or '0')
+				self.rating = 'Rating: %.1f' % float(rating)
+			except:
+				pass
+		self.info = json.get('year','') + ' | ' + json.get('reldate','')
+		
+		
+class SiteSearchResult(ReviewsResult):
+	def __init__(self,soupData,catID):
+		self.categoryID = catID
+		ReviewsResult.__init__(self, soupData)
+		
+	def processSoupData(self,soupData):
+		self.title = soupData.find('h3').getText(strip=True)
+		self.icon = soupData.find('img').get('src').replace('_small.','_medium.')
+		self.setURL(soupData.find('a').get('href'), self.categoryID)
+		self.info = soupData.find('table').getText(strip=True)
+		dtable = soupData.findAll('table')[-1]
+		self.description = self.getTableData(dtable, ': ')
+		ratingImage = soupData.find('img',{'src':lambda x: 'rating' in x})
+		if ratingImage:
+			self.rating = ratingImage.get('alt','')
+			self.ratingImage = 'rating/script-bluray-com-brating_%s.png' % self.extractRatingNumber(ratingImage.get('src'))
+		flagImg = soupData.find('img',{'src':lambda x: '/flags/' in x})
+		if flagImg: self.flagImage = flagImg.get('src','')
 		
 class ReleasesResult(ReviewsResult):
 	def processSoupData(self,soupData):
@@ -219,10 +302,7 @@ class CollectionResult(ReviewsResult):
 		the = json.get('the')
 		if the: self.title = the + ' ' + self.title
 		self.icon = json.get('coverurl0')
-		self.originalURL = json.get('url').replace('//ww.','//www.')
-		self.url = self.originalURL
-		if str(self.categoryID) in ('7','21'):
-			self.url = self.originalURL.replace('www','m')
+		self.setURL(json.get('url'), self.categoryID)
 		self.sortTitle = json.get('titlesort',self.title)
 		rating = json.get('rating','')
 		if rating:
@@ -288,10 +368,7 @@ class PriceTrackingResult(ReviewsResult):
 		self.title = json.get('title','')
 		self.icon = json.get('coverurl0','').replace('_small.','_medium.')
 		self.categoryID = json.get('categoryid','')
-		self.originalURL = json.get('url').replace('//ww.','//www.')
-		self.url = self.originalURL
-		if str(self.categoryID) in ('7','21'):
-			self.url = self.originalURL.replace('www','m')
+		self.setURL(json.get('url'), self.categoryID)
 		self.trackingID = json.get('gpid','')
 		self.countryCode = json.get('countrycode','')
 		self.itemID = json.get('id','')
@@ -347,6 +424,7 @@ class Review(ReviewsResult):
 		self.subheading1 = ''
 		self.subheading2 = ''
 		self.owned = False
+		self._url = url
 		ReviewsResult.__init__(self, soupData)
 		self.url = url
 		self.ID = self.url.strip('/').rsplit('/')[-1]
@@ -357,14 +435,7 @@ class Review(ReviewsResult):
 		
 		self.owned = bool(soupData.find('a',{'href':lambda x: '/collection.php' in x}))
 		
-		for i in soupData.findAll('img',{'id':'reviewScreenShot'}):
-			src = i.get('src','')
-			p1080 = src.replace('.jpg','_1080p.jpg')
-			self.images.append((src,p1080))
-			idx = src.rsplit('.',1)[0].split('_',1)[-1]
-			tag = soupData.new_tag('span')
-			tag.string = '[CR][COLOR FFA00000]IMAGE %s[/COLOR][CR]' % idx
-			i.insert_before(tag)
+		self.getImages(soupData)
 			
 		self.title = soupData.find('title').getText(strip=True)
 		
@@ -385,16 +456,18 @@ class Review(ReviewsResult):
 		
 		if reviewSoup:
 			self.convertHeaders(soupData, reviewSoup)
+			self.convertBR(reviewSoup)
 			self.convertTable(soupData, reviewSoup.find('table'))
-			self.review = self.cleanWhitespace(reviewSoup.getText())
+			self.review = self.colorRatings(self.cleanWhitespace(reviewSoup.getText()))
 			
 		price_rating = soupData.findAll('div',{'class':'content2'})
 		self.convertHeaders(soupData, price_rating[0])
-		self.price = self.cleanWhitespace(price_rating[0].getText())
+		self.convertBR(price_rating[0])
+		self.price = self.colorPrices(self.cleanWhitespace(price_rating[0].getText()))
 		if len(price_rating) > 1:
 			self.convertHeaders(soupData, price_rating[1])
-			self.convertTable(soupData, price_rating[1].find('table'))
-			self.blurayRating = self.cleanWhitespace(price_rating[1].getText())
+			self.convertTable(soupData, price_rating[1].find('table'),': ')
+			self.blurayRating = self.colorRatings(self.cleanWhitespace(price_rating[1].getText()))
 			
 		sections = soupData.findAll('div',{'data-role':'collapsible'})
 		for section in sections:
@@ -417,10 +490,33 @@ class Review(ReviewsResult):
 		if self.review.startswith('[CR]'): self.review = self.review[4:]
 		if self.overview.startswith('[CR]'): self.overview = self.overview[4:]
 			
+	def getImages(self,soupData):
+		img = soupData.find('img',{'id':'reviewScreenShot'})
+		if not img: return
+		base = img.get('src','').replace('1.jpg','%d.jpg')
+		try:
+			print self._url.replace('//m.','//www.')
+			test = requests.get(self._url.replace('//m.','//www.')).text
+			count = int(re.search('<td id="menu_screenshots_num"[^>]*?><small>\((\d+)\)</small>',test).group(1)) + 1
+		except:
+			count = 11
+			
+		for i in range(1,count):
+			src = base % i
+			p1080 = src.replace('.jpg','_1080p.jpg')
+			self.images.append((src,p1080))
+		
+		for i in soupData.findAll('img',{'id':'reviewScreenShot'}):
+			src = i.get('src','')
+			idx = src.rsplit('.',1)[0].split('_',1)[-1]
+			tag = soupData.new_tag('span')
+			tag.string = '[CR][COLOR FFA00000]IMAGE %s[/COLOR][CR]' % idx
+			i.insert_before(tag)
+			
 	def processOverview(self,soupData,section):
 		self.convertHeaders(soupData, section)
 		self.convertTable(soupData, section.find('table'),sep=': ')
-		self.overview = self.cleanWhitespace(section.getText())
+		self.overview = self.colorPercents(self.cleanWhitespace(section.getText()))
 		
 	def processSpecifications(self,soupData,section):
 		self.convertHeaders(soupData, section)
@@ -444,7 +540,7 @@ class Review(ReviewsResult):
 		for li in section.findAll('li'):
 			self.similarTitles.append((li.find('a').get('href'),li.find('img').get('src'),removeColorTags(li.getText())))
 			
-class GameReview(Review):
+class SiteReview(Review):
 	_resultType = 'GameReview'
 	def __init__(self,soupData, reviewSoupData, url):
 		self.reviewSoupData = reviewSoupData
@@ -461,11 +557,23 @@ class GameReview(Review):
 		if subheading: self.subheading1 = subheading.getText().strip()
 		
 		coverImg = soupData.find('img',{'id':'productimage'})
-		if coverImg:
-			self.coverImage = coverImg.get('src','')
-			self.coverFront = self.coverImage.replace('_medium','_large')
-			self.coverBack = ''
+		if not coverImg: coverImg = soupData.find('meta',{'property':lambda x: x and ('image' in x)})
+		if not coverImg: coverImg = soupData.find('meta',{'itemprop':lambda x: x and ('image' in x)})
 		
+		if coverImg:
+			self.coverImage = coverImg.get('src',coverImg.get('content',''))
+# 			self.coverFront = self.coverImage.replace('_medium','_large')
+# 			self.coverBack = self.coverFront.replace('1_large', '2_large')
+		
+		images = soupData.findAll('img',{'src':lambda x: '_mini.jpg' in x})
+		if images:
+			for i in images:
+				src = i.get('src')
+				if src:
+					self.images.append((src.replace('_mini.','_medium.'),src.replace('_mini.','_original.')))
+		else:
+			self.images.append((self.coverImage,self.coverImage.replace('_medium.','_front.')))
+			
 		for p in soupData.findAll('p'):
 			p.replaceWith(p.getText() + '[CR]')
 			
@@ -476,9 +584,53 @@ class GameReview(Review):
 					self.convertHeaders(soupData, sibling, 'h5')
 					for table in sibling.findAll('table'):
 						self.convertTable(soupData, table, ': ')
-					self.specifications = ('[COLOR %s][B]Specifications[/B][/COLOR][CR]' % self.headerColor) + self.cleanWhitespace(sibling.getText())
+					self.specifications = ('[COLOR %s][B]Specifications[/B][/COLOR][CR][CR]' % self.headerColor) + self.cleanWhitespace(sibling.getText())
 					break
-			
+		else:
+			try:
+				td = soupData.find('span',{'class':'subheading'},text='Video').parent
+				for span in td.findAll('span',{'class':'subheading'}): span.string = '[COLOR %s][B]%s[/B][/COLOR][CR]' % (self.headerColor,span.string)
+				self.specifications = ('[COLOR %s][B]Specifications[/B][/COLOR][CR][CR]' % self.headerColor) + self.cleanWhitespace(td.getText())
+			except:
+				pass
+		
+		if not self.specifications:
+			table = soupData.find('span',{'class':'subheading'}).find_next_sibling('table')
+			if table:
+				text = ''
+				for sib in table.find('div',{'id':'showdelete'}).next_siblings:
+					if sib.string == 'Links':
+						break
+					elif not sib.name:
+						t = sib.string.strip()
+						if t: text += t + ' '
+					else:
+						self.convertHeaders(soupData, sib)
+						self.replaceFlags(soupData, sib)
+						if sib.name == 'h3':
+							text += '[COLOR %s][B]%s[/B][/COLOR] ' % (self.headerColor,sib.getText(strip=True))
+						elif sib.name == 'br':
+							text += '[CR]'
+						else:
+							last = ''
+							for c in sib.descendants:
+								if last in ('br','div','tr'):
+									text += '[CR]'
+								if c.name == 'div':
+									text += '[CR]'
+								elif not c.name and c.string:
+									t = c.string.strip()
+									if t:
+										if c.parent.name == 'small': t = '[COLOR FF808080]%s[/COLOR]' % t
+										text += t
+										if not c.parent.name == 'td' and not c.parent.parent.name == 'td': text += ' '
+								elif c.name == 'td' and c.previous_sibling and c.previous_sibling.name == 'td' and not c.previous_sibling.find('br'):
+									text += ': '
+								last = c.name
+								
+				self.specifications = self.cleanWhitespace(text)
+		self.specifications = self.colorPercents(self.specifications)
+
 		price_rating = soupData.find('td',{'width':'35%'})
 		if price_rating:
 			price = '[COLOR %s][B]Price[/B][/COLOR][CR]' % self.headerColor
@@ -495,9 +647,44 @@ class GameReview(Review):
 					if text: price += text + ' '
 			price = self.cleanWhitespace(price)
 			while price.endswith('[CR]'): price = price[:-4]
-			self.price = price
-			self.getReviews()		
+			self.price = self.colorPrices(price)
+		else:
+			try:
+				td = soupData.find('span',{'class':'subheading'},text='iTunes store').parent
+				for span in td.findAll('span',{'class':'subheading'}): span.string = '[COLOR %s][B]%s[/B][/COLOR][CR]' % (self.headerColor,span.string)
+				text = ''
+				for c in td.children:
+					if c.name == 'table':
+						break
+					elif c.name in ('div','br'):
+						text += '[CR]'
+					elif not c.name:
+						t = c.string.strip()
+						if t: text += t + ' '
+					else:
+						t = c.getText(strip=True)
+						if t: text += t + ' '
+					
+						
+				self.price = ('[COLOR %s][B]Price[/B][/COLOR][CR][CR]' % self.headerColor) + self.cleanWhitespace(text)
+			except:
+				pass
+		try:
+			for graph in soupData.findAll('img',{'onmouseover':lambda x: x and 'pricehistory.php' in x}):
+				img = re.search("'(http://[^']*?)'",graph.get('onmouseover')).group(1)
+				self.historyGraphs.append((img,img))
+		except:
+			pass
+			
+		self.getReviews()
+		
+		for i in soupData.findAll('img',{'width':'80','src':lambda x: x and not x.endswith('.gif')}):
+			self.similarTitles.append((i.parent.get('href',''),i.get('src',''),i.get('title')))		
 
+		for i in soupData.findAll('img',{'width':'180','src':lambda x:x and x.endswith('_tn.jpg')}):
+			src = i.get('src','')
+			self.images.append((src.replace('_tn.','.'),src.replace('_tn.','_1080p.')))
+			
 	def getReviews(self):
 		rating = self.reviewSoupData.find('div',{'id':'ratingscore'}) or ''
 		if rating:
@@ -505,24 +692,49 @@ class GameReview(Review):
 				rating = ''
 			else:
 				rating = 'Rating: %s[CR][CR]' % rating.string
-		for tag in self.reviewSoupData.find('h3',text='Post a review').previous_siblings:
-			if tag.name == 'table':
-				self.convertHeaders(self.reviewSoupData, tag, 'h5',no_cr=True)
-				self.review = rating + self.cleanWhitespace(tag.getText().strip())
-				break
-			elif 'No user reviews' in tag.string:
-				self.review = rating + 'No Reviews'
-				break
+		reviewH3 = self.reviewSoupData.find('h3',text='Post a review')
+		if reviewH3:
+			for tag in reviewH3.previous_siblings:
+				if tag.name == 'table':
+					tables = [tag]
+					for sib in tag.previous_siblings:
+						if sib.name == 'table':
+							if sib.form: break
+							tables.insert(0, sib)
+					self.review = rating
+					for t in tables:
+						self.review += '[CR]' + self._hr + '[CR]' +  self.getUserReview(t)
+					break
+				elif tag.string and 'No user reviews' in tag.string:
+					self.review = rating + 'No Reviews'
+					break
+		else:
+			try:
+				rev = self.reviewSoupData.find('div',{'id':'movie_info'})
+				end = rev.find('a',{'rel':'history'})
+				if end: end.extract()
+				self.convertHeaders(self.reviewSoupData, rev,no_cr=True)
+				self.convertBR(rev)
+				self.review = self.cleanWhitespace(rev.getText().replace(u'\xbb',''))
+			except:
+				pass
+		self.review = self.colorRatings(self.review)
 		del self.reviewSoupData
+		
+	def getUserReview(self,table):
+		self.convertHeaders(self.reviewSoupData, table, 'h5',no_cr=True)
+		self.convertBR(table)
+		return self.cleanWhitespace(table.getText().strip())
 
 def removeColorTags(text):
 	return re.sub('\[/?COLOR[^\]]*?\]','',text)
-	
+
 class BlurayComAPI:
 	reviewsURL = 'http://m.blu-ray.com/movies/reviews.php'
 	releasesURL = 'http://m.blu-ray.com/movies'
 	dealsURL = 'http://m.blu-ray.com/deals/index.php'
-	searchURL = 'http://m.blu-ray.com/quicksearch/search.php?country={country}&section={section}&keyword={keyword}'
+	searchURL = 'http://m.blu-ray.com/quicksearch/search.php?userid=0&country={country}&section={section}&keyword={keyword}&_={time}'
+	apiSearchURL = 'http://m.blu-ray.com/api/quicksearch.php?country={country}&section={section}&keyword={keyword}&ak={ak}&session={session_id}'
 	siteLoginURL = 'http://forum.blu-ray.com/login.php'
 	apiLoginURL = 'http://m.blu-ray.com/api/userauth.php'
 	collectionURL = 'http://m.blu-ray.com/api/collection.json.php?categoryid={category}&imgsz=1&session={session_id}'
@@ -565,16 +777,36 @@ class BlurayComAPI:
 					(31,'iTunes')
 				)
 	
-	sections = (	('bluraymovies','Blu-ray'),
-					('3d','3D Blu-Ray'),
-					('dvdmovies','DVD'),
-					('theatrical','Movies'),
-					('uvmovies','UltraViolet'),
-					('aivmovies','Amazon'),
-					('itunesmovies','iTunes'),
-					('ps3','PS3')
+	sections = (	('bluraymovies','Blu-ray',7),
+					('3d','3D Blu-Ray',0),
+					('dvdmovies','DVD',21),
+					('theatrical','Movies',20),
+					('uvmovies','UltraViolet',24),
+					('aivmovies','Amazon',28),
+					('itunesmovies','iTunes',31),
+					('16','PS3',16),
+					('23','XBox 360',23),
+					('26','Wii',26),
+					('29','PS4',29),
+					('30','XBox One',30),
+					('27','Wii U',27)
 			)
-				
+	
+	coverURLs = {	'16':'http://images.static-bluray.com/products/16/{id}_1_medium.jpg',
+					'28':'http://images.static-bluray.com/movies/aivcovers/{id}_{size}.jpg',
+					'31':'http://images.static-bluray.com/movies/itunescovers/{id}_{size}.jpg',
+					'24':'http://images.static-bluray.com/movies/uvcovers/{id}_{size}.jpg'
+				}
+			
+	pageURLs = {	'20':'http://www.blu-ray.com/X/{id}/',
+					'28':'http://www.blu-ray.com/aiv/X-AIV/{id}/',
+					'31':'http://www.blu-ray.com/itunes/X-iTunes/{id}/',
+					'24':'http://www.blu-ray.com/uv/{urlname}-UltraViolet/{id}/'
+				}
+	
+	siteSearchURL = 'http://www.blu-ray.com/{platform}/search.php'
+	siteSearchPlatforms = {	'29':'ps4', '23':'xbox360', '30':'xboxone', '26':'wii', '27':'wiiu','16':'ps3'}
+	
 	countries = [	{"c":"all","n":"All countries","u":"http://images.static-bluray.com/flags/global-transparent.png"},
 					{"c":"us","n":"United States","u":"http://images3.static-bluray.com/flags/US.png"},
 					{"c":"uk","n":"United Kingdom","u":"http://images3.static-bluray.com/flags/UK.png"},
@@ -613,6 +845,8 @@ class BlurayComAPI:
 					{"c":"ua","n":"Ukraine","u":"http://images.static-bluray.com/flags/UA.png"}
 				]
 	
+	siteEncoding = 'iso-8859-2'
+		
 	def __init__(self):
 		self.parser = None
 		self.sessionID = ''
@@ -628,20 +862,24 @@ class BlurayComAPI:
 	
 	def url2Soup(self,url):
 		req = self.session().get(url)
+		req.encoding = self.siteEncoding
+		return self.getSoup(req.text)
+	
+	def getSoup(self,text):
 		try:
-			soup = bs4.BeautifulSoup(req.text, 'lxml')
+			soup = bs4.BeautifulSoup(text, 'lxml', from_encoding=self.siteEncoding)
 			LOG('Using: lxml parser')
 			return soup
 		except:
 			pass
 		try:
-			soup = bs4.BeautifulSoup(req.text, 'html5lib')
+			soup = bs4.BeautifulSoup(text, 'html5lib', from_encoding=self.siteEncoding)
 			LOG('Using: html5lib parser')
 			return soup
 		except:
 			pass
 		LOG('Using: html.parser parser')
-		return bs4.BeautifulSoup(req.text, self.parser)
+		return bs4.BeautifulSoup(text, self.parser, from_encoding=self.siteEncoding)
 	
 	def getCategories(self):
 		cats = [(TR['reviews'],'','reviews'),(TR['releases'],'','releases'),(TR['deals'],'','deals'),(TR['search'],'','search')]
@@ -709,18 +947,19 @@ class BlurayComAPI:
 			new += ' '
 			line = new.lstrip()
 			if line != new: line = ' ' + line
-			fixed += line 
+			fixed += line
+		fixed = fixed.replace(u'\x97',' - ').replace(u'\x92',u'\u2019').replace(u'\x93',u'\u201c').replace(u'\x94',u'\u201d')
 		fixed = re.sub('<i>(?i)','[I]',fixed)
 		fixed = re.sub('</i>(?i)',' [/I]',fixed)
-		fixed = re.sub('<br[^>]*?>(?i)','[CR]',fixed)
-		return bs4.BeautifulSoup(fixed,self.parser,from_encoding=req.encoding)
+		#fixed = re.sub('<br[^>]*?>(?i)','[CR]',fixed)
+		return bs4.BeautifulSoup(fixed,self.parser,from_encoding=self.siteEncoding)
 	
 	def getReview(self,url):
 		req = self.session().get(url)
 		soup = self.makeReviewSoup(req)
 		if '/www.' in url:
 			soup2 = self.makeReviewSoup(self.session().get(url + '?show=userreviews'))
-			return GameReview(soup,soup2,url)
+			return SiteReview(soup,soup2,url)
 		else:
 			return Review(soup,url)
 	
@@ -753,11 +992,26 @@ class BlurayComAPI:
 		items.sort(key=lambda i: i.sortTitle)
 		return items
 	
+	def getCatIDFromSection(self,section):
+		for s,label,catID in self.sections:  # @UnusedVariable
+			if s == section:
+				return catID
+			
 	def search(self,terms,section='bluraymovies',country='all'):
-		req = requests.get(self.searchURL.format(section=section,country=country.upper(),keyword=urllib.quote(terms)))
-		results = []
-		for i in req.json().get('items',[]):
-			results.append(ReviewsResultJSON(i))
+		if section.isdigit():
+			url = self.siteSearchURL.format(platform=self.siteSearchPlatforms.get(str(section)))
+			req = requests.post(url,data={'general_model':terms,'action':'search','c':section,'searchsubmit':'Search'},headers={'Referer':url})
+			results = []
+			soup = self.getSoup(req.text)
+			for table in soup.find('form',{'id':'compareform'}).findAll('table',recursive=False):
+				results.append(SiteSearchResult(table,section))
+		else:
+			url = self.searchURL.format(section=section,country=country.upper(),keyword=urllib.quote(terms),time=str(int(time.time()*1000)))
+			req = requests.get(url)
+			results = []
+			for i in req.json().get('items',[]):
+				results.append(ReviewsResultJSON(i,self.getCatIDFromSection(section)))
+				
 		return results
 		
 	def updateCollectable(self,newdata):

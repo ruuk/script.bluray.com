@@ -206,6 +206,7 @@ class BluRayReviews(BaseWindowDialog):
 				m.addItem(cat_id,cat)
 			result = self.getCurrentItemResult()
 			if result:
+				m.addSep()
 				m.addItem('remove',T(32029))
 				if result.watched:
 					m.addItem('unmarkwatched',T(32033))
@@ -364,12 +365,13 @@ class BluRayReview(BaseWindowDialog):
 				item = xbmcgui.ListItem(iconImage=url)
 				item.setProperty('1080p',url_1080p)
 				items.append(item)
+			if review.coverFront or review.coverBack:
+				item = xbmcgui.ListItem()
+				item.setProperty('front',review.coverImage or 'script-bluray-com-no_cover.png')
+				item.setProperty('frontLarge',review.coverFront or 'script-bluray-com-no_cover.png')
+				item.setProperty('back',review.coverBack or 'script-bluray-com-no_cover.png')
+				items.append(item)
 			ct = 0
-			item = xbmcgui.ListItem()
-			item.setProperty('front',review.coverImage or 'script-bluray-com-no_cover.png')
-			item.setProperty('frontLarge',review.coverFront or 'script-bluray-com-no_cover.png')
-			item.setProperty('back',review.coverBack or 'script-bluray-com-no_cover.png')
-			items.append(item)
 			for source, url in review.historyGraphs:  # @UnusedVariable
 				url = imageToCache(url,'graph%s.png' % ct)
 				item = xbmcgui.ListItem(iconImage=url)
@@ -400,7 +402,9 @@ class BluRayReview(BaseWindowDialog):
 				item.setProperty('link',link)
 				item.setProperty('text',text)
 				items.append(item)
-			self.altList.addItems(items)
+			if items:
+				self.setProperty('has_other', '1')
+				self.altList.addItems(items)
 		finally:
 			self.loading.setVisible(False)
 			self.setFocus(self.imagesList)
@@ -457,7 +461,7 @@ class BluRaySearch(BaseWindowDialog):
 		
 		items = []
 		ct = 0
-		for sid, sname in API.sections:
+		for sid, sname, catID in API.sections:  # @UnusedVariable
 			item = xbmcgui.ListItem(label=sname)
 			item.setProperty('sectionid',sid)
 			items.append(item)
@@ -542,6 +546,8 @@ class ChoiceList:
 	def addItem(self,ID,label):
 		self.items.append({'id':ID,'label':label})
 		
+	def addSep(self):
+		self.items.append({'id':None,'label':' '})
 	def getResult(self):
 		items = []
 		for i in self.items: items.append(i['label'])
