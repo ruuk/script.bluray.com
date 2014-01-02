@@ -197,6 +197,7 @@ class BluRayReviews(BaseWindowDialog):
 		item.setProperty('ratingImage',i.ratingImage)
 		item.setProperty('url',i.url)
 		item.setProperty('flag',i.flagImage)
+		item.setProperty('catID',str(i.categoryID))
 				
 	def doMenu(self):
 		if self.mode == 'COLLECTION':
@@ -312,7 +313,7 @@ class BluRayReviews(BaseWindowDialog):
 				if item.getProperty('paging') == 'section': return
 				self.refresh(page=item.getProperty('page'))
 			else:
-				openWindow(BluRayReview, 'bluray-com-review.xml',url=item.getProperty('url'))
+				openWindow(BluRayReview, 'bluray-com-review.xml',url=item.getProperty('url'),cat_id=item.getProperty('catID'))
 				
 	def onAction(self,action):
 		try:
@@ -327,6 +328,7 @@ class BluRayReview(BaseWindowDialog):
 	def __init__(self,*args,**kwargs):
 		BaseWindowDialog.__init__(self)
 		self.url = kwargs.get('url')
+		self.categoryID = kwargs.get('cat_id')
 		self.review = None
 		
 	def onInit(self):
@@ -348,7 +350,7 @@ class BluRayReview(BaseWindowDialog):
 	def showReview(self):
 		self.loading.setVisible(True)
 		try:
-			review = API.getReview(self.url)
+			review = API.getReview(self.url,self.categoryID)
 			self.review = review
 			self.setProperty('title', review.title)
 			self.setProperty('subheading1', review.subheading1)

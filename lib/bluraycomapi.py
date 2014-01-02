@@ -34,11 +34,14 @@ class ResultItem:
 	_hr = '[COLOR FF606060]%s[/COLOR]' % ('_' * 200)
 	headerColor = 'FF0080D0'
 	
-	def __init__(self,soupData):
+	def __init__(self):
 		self.title = ''
 		self.icon = ''
 		self.ID = ''
+		
+	def start(self,soupData):
 		self.processSoupData(soupData)
+		return self
 	
 	def __str__(self):
 		return '<%s=%s %s>' % (self._resultType,self.title,self.ID)
@@ -98,6 +101,19 @@ class ResultItem:
 			new.string = '(%s) ' % img.get('src','').rsplit('.',1)[0].rsplit('/',1)[-1]
 			img.replaceWith(new)
 		
+	_flagCodeRE = re.compile('/flags/([\w-]+)\.png')
+	def convertFlagImage(self,url):
+		try:
+			code = self._flagCodeRE.search(url).group(1).lower()
+			if code == 'global-transparent': code = 'all'
+			for i in BlurayComAPI.countries:
+				if code == i['c']:
+					return i['u']
+			raise Exception('Country Not Found')
+		except:
+			pass
+		return url
+	
 	_excessiveNL = re.compile('(?:\s*\[CR\]\s*){3,}')
 	def cleanWhitespace(self,text):
 		text = text.strip()
@@ -128,7 +144,7 @@ class ResultItem:
 class ReviewsResult(ResultItem):
 	_resultType = 'ReviewsResult'
 	
-	def __init__(self,soupData):
+	def __init__(self):
 		self._section = None
 		self.description = ''
 		self.rating = ''
@@ -139,12 +155,13 @@ class ReviewsResult(ResultItem):
 		self.flagImage = ''
 		self.previous = None
 		self.next = None
-		ResultItem.__init__(self, soupData)
+		self.categoryID = ''
+		ResultItem.__init__(self)
 		
 	def processSoupData(self,soupData):
 		self.title = soupData.find('h3').getText().strip()
 		flagImg = soupData.find('img',{'src':lambda x: '/flag/' in x})
-		if flagImg: self.flagImage = flagImg.get('src','')
+		if flagImg: self.flagImage = self.convertFlagImage(flagImg.get('src',''))
 		images = soupData.findAll('img')
 		self.icon = images[0].get('src')
 		self.rating = images[-1].get('alt')
@@ -163,9 +180,9 @@ class ReviewsResult(ResultItem):
 		self.ID = self.url.strip('/').rsplit('/')[-1]
 
 class ReviewsResultJSON(ReviewsResult):
-	def __init__(self,soupData,catID):
+	def __init__(self,catID):
+		ReviewsResult.__init__(self)
 		self.categoryID = catID
-		ReviewsResult.__init__(self, soupData)
 		
 	def processSoupData(self,json):
 		self.title = json.get('title','')
@@ -183,7 +200,7 @@ class ReviewsResultJSON(ReviewsResult):
 			self.url = BlurayComAPI.pageURLs[catID].format(urlname=urlName,id=self.ID)
 		elif catID in BlurayComAPI.pageURLs:
 			self.url = BlurayComAPI.pageURLs[catID].format(id=self.ID)
-		self.flagImage = json.get('flag','')
+		self.flagImage = self.convertFlagImage(json.get('flag',''))
 		rating = json.get('rating','')
 		try:
 			rating = int(rating)
@@ -199,9 +216,9 @@ class ReviewsResultJSON(ReviewsResult):
 		
 		
 class SiteSearchResult(ReviewsResult):
-	def __init__(self,soupData,catID):
+	def __init__(self,catID):
+		ReviewsResult.__init__(self)
 		self.categoryID = catID
-		ReviewsResult.__init__(self, soupData)
 		
 	def processSoupData(self,soupData):
 		self.title = soupData.find('h3').getText(strip=True)
@@ -215,7 +232,7 @@ class SiteSearchResult(ReviewsResult):
 			self.rating = ratingImage.get('alt','')
 			self.ratingImage = 'rating/script-bluray-com-brating_%s.png' % self.extractRatingNumber(ratingImage.get('src'))
 		flagImg = soupData.find('img',{'src':lambda x: '/flags/' in x})
-		if flagImg: self.flagImage = flagImg.get('src','')
+		if flagImg: self.flagImage = self.convertFlagImage(flagImg.get('src',''))
 		
 class ReleasesResult(ReviewsResult):
 	def processSoupData(self,soupData):
@@ -255,13 +272,13 @@ class DealsResult(ReviewsResult):
 
 class CollectionResult(ReviewsResult):
 	infoTags = ('runtime','studio','year','releasetimestamp')
-	def __init__(self,soupData,categoryid):
+	def __init__(self,categoryid):
+		ReviewsResult.__init__(self)
 		self.categoryID = categoryid
 		self.sortTitle = ''
 		self.originalURL = ''
 		self.watched = False
 		self.json = {}
-		ReviewsResult.__init__(self, soupData)
 		
 	'''
 	rating: 8.6842
@@ -342,7 +359,8 @@ class CollectionResult(ReviewsResult):
 		self.processSoupData(self.json)
 	
 class PriceTrackingResult(ReviewsResult):
-	def __init__(self,soupData):
+	def __init__(self):
+		ReviewsResult.__init__(self)
 		self.json = {}
 		self.itemID = ''
 		self.trackingID = ''
@@ -359,8 +377,6 @@ class PriceTrackingResult(ReviewsResult):
 		self.priceRange = ''
 		self.listPrice = ''
 		self.originalURL = ''
-		
-		ReviewsResult.__init__(self, soupData)
 			
 	def processSoupData(self,json):
 		self.json = json
@@ -407,7 +423,8 @@ class PriceTrackingResult(ReviewsResult):
 
 class Review(ReviewsResult):
 	_resultType = 'Review'
-	def __init__(self,soupData,url):
+	def __init__(self,url):
+		ReviewsResult.__init__(self)
 		self.flagImage = ''
 		self.coverImage = ''
 		self.coverFront = ''
@@ -424,14 +441,12 @@ class Review(ReviewsResult):
 		self.subheading1 = ''
 		self.subheading2 = ''
 		self.owned = False
-		self._url = url
-		ReviewsResult.__init__(self, soupData)
 		self.url = url
 		self.ID = self.url.strip('/').rsplit('/')[-1]
 		
 	def processSoupData(self,soupData):
 		flagImg = soupData.find('img',{'src':lambda x: 'flags' in x})
-		if flagImg: self.flagImage = flagImg.get('src','')
+		if flagImg: self.flagImage = self.convertFlagImage(flagImg.get('src',''))
 		
 		self.owned = bool(soupData.find('a',{'href':lambda x: '/collection.php' in x}))
 		
@@ -495,8 +510,7 @@ class Review(ReviewsResult):
 		if not img: return
 		base = img.get('src','').replace('1.jpg','%d.jpg')
 		try:
-			print self._url.replace('//m.','//www.')
-			test = requests.get(self._url.replace('//m.','//www.')).text
+			test = requests.get(self.url.replace('//m.','//www.')).text
 			count = int(re.search('<td id="menu_screenshots_num"[^>]*?><small>\((\d+)\)</small>',test).group(1)) + 1
 		except:
 			count = 11
@@ -542,16 +556,16 @@ class Review(ReviewsResult):
 			
 class SiteReview(Review):
 	_resultType = 'GameReview'
-	def __init__(self,soupData, reviewSoupData, url):
+	def __init__(self, reviewSoupData, url):
+		Review.__init__(self, url)
 		self.reviewSoupData = reviewSoupData
-		Review.__init__(self, soupData, url)
 		
 	def processSoupData(self,soupData):
 		self.owned = bool(soupData.find('a',{'href':lambda x: x and ('/collection.php' in x) and ('action=showcategory' in x)}))		
 		self.title = soupData.find('title').getText(strip=True)
 		
 		flagImg = soupData.find('img',{'src':lambda x: 'flags' in x})
-		if flagImg: self.flagImage = flagImg.get('src','')
+		if flagImg: self.flagImage = self.convertFlagImage(flagImg.get('src',''))
 		
 		subheading = soupData.find('span',{'class':'subheading'})
 		if subheading: self.subheading1 = subheading.getText().strip()
@@ -564,15 +578,6 @@ class SiteReview(Review):
 			self.coverImage = coverImg.get('src',coverImg.get('content',''))
 # 			self.coverFront = self.coverImage.replace('_medium','_large')
 # 			self.coverBack = self.coverFront.replace('1_large', '2_large')
-		
-		images = soupData.findAll('img',{'src':lambda x: '_mini.jpg' in x})
-		if images:
-			for i in images:
-				src = i.get('src')
-				if src:
-					self.images.append((src.replace('_mini.','_medium.'),src.replace('_mini.','_original.')))
-		else:
-			self.images.append((self.coverImage,self.coverImage.replace('_medium.','_front.')))
 			
 		for p in soupData.findAll('p'):
 			p.replaceWith(p.getText() + '[CR]')
@@ -675,9 +680,44 @@ class SiteReview(Review):
 				self.historyGraphs.append((img,img))
 		except:
 			pass
-			
+		
+		rating = soupData.find('div',{'id':'ratingscore'}) or ''
+		if rating:
+			if rating.string == '0':
+				rating = ''
+			else:
+				rating = 'Rating: %s[CR][CR]' % rating.string
+				
+		start = soupData.find('a',{'href':lambda x: x and '&reviewerid=' in x})
+		if start:
+			review = start.parent.getText()
+			idx = 1
+			for sib in start.parent.next_siblings:
+				if sib.name == 'a' and 'history' in sib.get('rel',''):
+					break
+				elif sib.name and sib.find('img'):
+					url = sib.find('img').get('src','')
+					self.images.append((url,url.replace('_tn.','_original.')))
+					review += '[CR][COLOR FFA00000]IMAGE %s[/COLOR][CR]' % idx
+					idx += 1
+				elif sib.name == 'br':
+					review += '[CR]'
+				elif sib.name:
+					review += sib.getText()
+				else:
+					review += sib.string
+			self.review = rating + self.cleanWhitespace(review.replace(u'\xbb','')) + '[CR][CR]'
 		self.getReviews()
 		
+		images = soupData.findAll('img',{'src':lambda x: '_mini.jpg' in x})
+		if images:
+			for i in images:
+				src = i.get('src')
+				if src:
+					self.images.append((src.replace('_mini.','_medium.'),src.replace('_mini.','_original.')))
+		else:
+			self.images.append((self.coverImage,self.coverImage.replace('_medium.','_front.')))
+			
 		for i in soupData.findAll('img',{'width':'80','src':lambda x: x and not x.endswith('.gif')}):
 			self.similarTitles.append((i.parent.get('href',''),i.get('src',''),i.get('title')))		
 
@@ -686,12 +726,6 @@ class SiteReview(Review):
 			self.images.append((src.replace('_tn.','.'),src.replace('_tn.','_1080p.')))
 			
 	def getReviews(self):
-		rating = self.reviewSoupData.find('div',{'id':'ratingscore'}) or ''
-		if rating:
-			if rating.string == '0':
-				rating = ''
-			else:
-				rating = 'Rating: %s[CR][CR]' % rating.string
 		reviewH3 = self.reviewSoupData.find('h3',text='Post a review')
 		if reviewH3:
 			for tag in reviewH3.previous_siblings:
@@ -701,12 +735,14 @@ class SiteReview(Review):
 						if sib.name == 'table':
 							if sib.form: break
 							tables.insert(0, sib)
-					self.review = rating
+					if tables:
+						if self.review: self.review += '[B]%s[/B][CR][CR]'  % ('_' * 200)
+						self.review += '[COLOR %s][B]User Reviews[/B][/COLOR]' % self.headerColor
 					for t in tables:
 						self.review += '[CR]' + self._hr + '[CR]' +  self.getUserReview(t)
 					break
 				elif tag.string and 'No user reviews' in tag.string:
-					self.review = rating + 'No Reviews'
+					self.review += 'No Reviews'
 					break
 		else:
 			try:
@@ -771,7 +807,7 @@ class BlurayComAPI:
 					(30,'XBox One'),
 					(26,'Wii'),
 					(27,'Wii U'),
-					(20,'Movies'),
+					(20,'Theatrical'),
 					(24,'UltraViolet'),
 					(28,'Amazon'),
 					(31,'iTunes')
@@ -780,7 +816,7 @@ class BlurayComAPI:
 	sections = (	('bluraymovies','Blu-ray',7),
 					('3d','3D Blu-Ray',0),
 					('dvdmovies','DVD',21),
-					('theatrical','Movies',20),
+					('theatrical','Theatrical',20),
 					('uvmovies','UltraViolet',24),
 					('aivmovies','Amazon',28),
 					('itunesmovies','iTunes',31),
@@ -807,7 +843,45 @@ class BlurayComAPI:
 	siteSearchURL = 'http://www.blu-ray.com/{platform}/search.php'
 	siteSearchPlatforms = {	'29':'ps4', '23':'xbox360', '30':'xboxone', '26':'wii', '27':'wiiu','16':'ps3'}
 	
-	countries = [	{"c":"all","n":"All countries","u":"http://images.static-bluray.com/flags/global-transparent.png"},
+	countries = [	{"c":"all","n":"All countries","u":"flags/ALL.png"},
+					{"c":"us","n":"United States","u":"flags/US.png"},
+					{"c":"uk","n":"United Kingdom","u":"flags/GB.png"},
+					{"c":"ca","n":"Canada","u":"flags/CA.png"},
+					{"c":"de","n":"Germany","u":"flags/DE.png"},
+					{"c":"fr","n":"France","u":"flags/FR.png"},
+					{"c":"au","n":"Australia","u":"flags/AU.png"},
+					{"c":"nz","n":"New Zealand","u":"flags/NZ.png"},
+					{"c":"za","n":"South Africa","u":"flags/ZA.png"},
+					{"c":"it","n":"Italy","u":"flags/IT.png"},
+					{"c":"es","n":"Spain","u":"flags/ES.png"},
+					{"c":"hk","n":"Hong Kong","u":"flags/HK.png"},
+					{"c":"kr","n":"South Korea","u":"flags/KR.png"},
+					{"c":"jp","n":"Japan","u":"flags/JP.png"},
+					{"c":"tw","n":"Taiwan","u":"flags/TW.png"},
+					{"c":"be","n":"Belgium","u":"flags/BE.png"},
+					{"c":"at","n":"Austria","u":"flags/AT.png"},
+					{"c":"ch","n":"Switzerland","u":"flags/CH.png"},
+					{"c":"br","n":"Brazil","u":"flags/BR.png"},
+					{"c":"pt","n":"Portugal","u":"flags/PT.png"},
+					{"c":"cn","n":"China","u":"flags/CN.png"},
+					{"c":"cz","n":"Czech Republic","u":"flags/CZ.png"},
+					{"c":"dk","n":"Denmark","u":"flags/DK.png"},
+					{"c":"fi","n":"Finland","u":"flags/FI.png"},
+					{"c":"gr","n":"Greece","u":"flags/GR.png"},
+					{"c":"hu","n":"Hungary","u":"flags/HU.png"},
+					{"c":"in","n":"India","u":"flags/IN.png"},
+					{"c":"mx","n":"Mexico","u":"flags/MX.png"},
+					{"c":"nl","n":"Holland","u":"flags/NL.png"},
+					{"c":"no","n":"Norway","u":"flags/NO.png"},
+					{"c":"pl","n":"Poland","u":"flags/PL.png"},
+					{"c":"ru","n":"Russia","u":"flags/RU.png"},
+					{"c":"se","n":"Sweden","u":"flags/SE.png"},
+					{"c":"th","n":"Thailand","u":"flags/TH.png"},
+					{"c":"tr","n":"Turkey","u":"flags/TR.png"},
+					{"c":"ua","n":"Ukraine","u":"flags/UA.png"}
+				]
+	
+	countries_n = [	{"c":"all","n":"All countries","u":"http://images.static-bluray.com/flags/global-transparent.png"},
 					{"c":"us","n":"United States","u":"http://images3.static-bluray.com/flags/US.png"},
 					{"c":"uk","n":"United Kingdom","u":"http://images3.static-bluray.com/flags/UK.png"},
 					{"c":"ca","n":"Canada","u":"http://images3.static-bluray.com/flags/CA.png"},
@@ -844,6 +918,51 @@ class BlurayComAPI:
 					{"c":"tr","n":"Turkey","u":"http://images3.static-bluray.com/flags/TR.png"},
 					{"c":"ua","n":"Ukraine","u":"http://images.static-bluray.com/flags/UA.png"}
 				]
+	
+	genres = [	('all', u'All genres'),
+				('action', u'Action', '1'),
+				('adventure', u'Adventure', '2'),
+				('animation', u'Animation', '3'),
+				('anime', u'Anime', '4'),
+				('biography', u'Biography', '5'),
+				('comedy', u'Comedy', '6'),
+				('comicbook', u'Comic book', '35'),
+				('comingofage', u'Coming of age', '43'),
+				('crime', u'Crime', '7'),
+				('blackcomedy', u'Dark humor', '29'),
+				('documentary', u'Documentary', '8'),
+				('drama', u'Drama', '9'),
+				('epic', u'Epic', '39'),
+				('erotic', u'Erotic', '33'),
+				('family', u'Family', '10'),
+				('fantasy', u'Fantasy', '11'),
+				('filmnoir', u'Film-Noir', '12'),
+				('foreign', u'Foreign', '36'),
+				('heist', u'Heist', '44'),
+				('history', u'History', '13'),
+				('holiday', u'Holiday', '42'),
+				('horror', u'Horror', '14'),
+				('imaginary', u'Imaginary', '31'),
+				('martialarts', u'Martial arts', '34'),
+				('melodrama', u'Melodrama', '38'),
+				('music', u'Music', '15'),
+				('musical', u'Musical', '16'),
+				('mystery', u'Mystery', '17'),
+				('nature', u'Nature', '18'),
+				('other', u'Other', '19'),
+				('period', u'Period', '41'),
+				('psychologicalthriller', u'Psychological thriller', '30'),
+				('romance', u'Romance', '20'),
+				('scifi', u'Sci-Fi', '21'),
+				('short', u'Short', '22'),
+				('sport', u'Sport', '23'),
+				('supernatural', u'Supernatural', '32'),
+				('surreal', u'Surreal', '37'),
+				('teen', u'Teen', '28'),
+				('thriller', u'Thriller', '25'),
+				('war', u'War', '26'),
+				('western', u'Western', '27')
+			]
 	
 	siteEncoding = 'iso-8859-2'
 		
@@ -903,7 +1022,7 @@ class BlurayComAPI:
 		section = ''
 		for i in soup.findAll('li'): #,{'data-role':lambda x: not x}):
 			if i.h3:
-				res = ReleasesResult(i)
+				res = ReleasesResult().start(i)
 				if section:
 					res._section = section
 					section = ''
@@ -924,7 +1043,7 @@ class BlurayComAPI:
 		items = []
 		soup = self.url2Soup(self.dealsURL + page)
 		for i in soup.findAll('li',{'data-role':lambda x: not x}):
-			items.append(DealsResult(i))
+			items.append(DealsResult().start(i))
 		return (items,self.getPaging(soup))
 	
 	def getReviews(self,page=''):
@@ -935,7 +1054,7 @@ class BlurayComAPI:
 		soup = self.url2Soup(self.reviewsURL + page)
 		items = []
 		for i in soup.findAll('li',{'data-role':lambda x: not x}):
-			items.append(ReviewsResult(i))
+			items.append(ReviewsResult().start(i))
 		return (items,self.getPaging(soup))
 	
 	def makeReviewSoup(self,req):
@@ -954,14 +1073,18 @@ class BlurayComAPI:
 		#fixed = re.sub('<br[^>]*?>(?i)','[CR]',fixed)
 		return bs4.BeautifulSoup(fixed,self.parser,from_encoding=self.siteEncoding)
 	
-	def getReview(self,url):
-		req = self.session().get(url)
+	def getReview(self,url,catID):
+		if str(catID) == '20':
+			req = self.session().get(url + '?show=preview')
+		else:
+			req = self.session().get(url)
+		
 		soup = self.makeReviewSoup(req)
 		if '/www.' in url:
 			soup2 = self.makeReviewSoup(self.session().get(url + '?show=userreviews'))
-			return SiteReview(soup,soup2,url)
+			return SiteReview(soup2,url).start(soup)
 		else:
-			return Review(soup,url)
+			return Review(url).start(soup)
 	
 	def getCollection(self,categories):
 		'''
@@ -987,7 +1110,7 @@ class BlurayComAPI:
 			
 			
 			for i in json['collection']:
-				items.append(CollectionResult(i,category))
+				items.append(CollectionResult(category).start(i))
 				
 		items.sort(key=lambda i: i.sortTitle)
 		return items
@@ -1004,13 +1127,13 @@ class BlurayComAPI:
 			results = []
 			soup = self.getSoup(req.text)
 			for table in soup.find('form',{'id':'compareform'}).findAll('table',recursive=False):
-				results.append(SiteSearchResult(table,section))
+				results.append(SiteSearchResult(section).start(table))
 		else:
 			url = self.searchURL.format(section=section,country=country.upper(),keyword=urllib.quote(terms),time=str(int(time.time()*1000)))
 			req = requests.get(url)
 			results = []
 			for i in req.json().get('items',[]):
-				results.append(ReviewsResultJSON(i,self.getCatIDFromSection(section)))
+				results.append(ReviewsResultJSON(self.getCatIDFromSection(section)).start(i))
 				
 		return results
 		
@@ -1083,7 +1206,7 @@ class BlurayComAPI:
 			json = req.json()
 			if not 'items' in json: return []
 		for i in json['items']:
-			items.append(PriceTrackingResult(i))
+			items.append(PriceTrackingResult().start(i))
 				
 		return items
 	
