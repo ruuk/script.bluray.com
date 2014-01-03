@@ -1196,10 +1196,13 @@ class BlurayComAPI:
 		return not 'error' in req.json()
 	
 	def getPriceTracking(self):
+		print 'START'
 		if not self.apiLogin(): return
+		print 'LOGGED IN'
 		items = []
 		req = requests.get(self.myPriceTrackerURL.format(session_id=self.sessionID))
 		json = req.json()
+		print json
 		if not 'items' in json:
 			if not self.apiLogin(force=True): return []
 			req = requests.get(self.myPriceTrackerURL.format(session_id=self.sessionID))
