@@ -11,6 +11,17 @@
 		<control type="group">
 			<posx>0</posx>
 			<posy>0</posy>
+			<control type="label">
+				<posx>0</posx>
+				<posy>20</posy>
+				<width>1920</width>
+				<height>30</height>
+				<font>font10</font>
+				<aligny>center</aligny>
+				<textcolor>FF808080</textcolor>
+				<align>center</align>
+				<label>$INFO[Window.Property(filterstring)]</label>
+			</control>
 			<control type="image">
 				<posx>0</posx>
 				<posy>130</posy>

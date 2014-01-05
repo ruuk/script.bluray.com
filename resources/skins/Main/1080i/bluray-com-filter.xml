@@ -1,0 +1,601 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<window>
+	<defaultcontrol>200</defaultcontrol>
+	<animation effect="slide" end="0,540" time="200">WindowOpen</animation>
+	<animation effect="slide" start="0,540" end="0,0" time="200">WindowClose</animation>
+	<coordinates>
+		<system>1</system>
+		<posx>0</posx>
+		<posy>-540</posy>
+	</coordinates>
+	<controls>
+		<control type="group">
+			<posx>0</posx>
+			<posy>0</posy>
+			<control type="image">
+				<posx>0</posx>
+				<posy>0</posy>
+				<width>1920</width>
+				<height>540</height>
+				<texture>script-bluray-com-white_square.png</texture>
+				<colordiffuse>FF808080</colordiffuse>
+			</control>
+			
+			<control type="image">
+				<posx>200</posx>
+				<posy>20</posy>
+				<width>80</width>
+				<height>500</height>
+				<texture>script-bluray-com-white_square.png</texture>
+				<colordiffuse>FF404040</colordiffuse>
+			</control>
+			<control type="image">
+				<posx>300</posx>
+				<posy>20</posy>
+				<width>360</width>
+				<height>500</height>
+				<texture>script-bluray-com-white_square.png</texture>
+				<colordiffuse>FF404040</colordiffuse>
+			</control>
+			<control type="image">
+				<posx>680</posx>
+				<posy>20</posy>
+				<width>360</width>
+				<height>500</height>
+				<texture>script-bluray-com-white_square.png</texture>
+				<colordiffuse>FF404040</colordiffuse>
+			</control>
+			<control type="image">
+				<posx>1060</posx>
+				<posy>20</posy>
+				<width>360</width>
+				<height>500</height>
+				<texture>script-bluray-com-white_square.png</texture>
+				<colordiffuse>FF404040</colordiffuse>
+			</control>
+			<control type="image">
+				<posx>1450</posx>
+				<posy>20</posy>
+				<width>200</width>
+				<height>500</height>
+				<texture>script-bluray-com-white_square.png</texture>
+				<colordiffuse>FF404040</colordiffuse>
+			</control>
+			<control type="image">
+				<posx>1670</posx>
+				<posy>20</posy>
+				<width>220</width>
+				<height>500</height>
+				<texture>script-bluray-com-white_square.png</texture>
+				<colordiffuse>FF404040</colordiffuse>
+			</control>
+			
+			<control type="image">
+				<posx>190</posx>
+				<posy>251</posy>
+				<width>1730</width>
+				<height>40</height>
+				<texture>script-bluray-com-white_square.png</texture>
+				<colordiffuse>FF000000</colordiffuse>
+			</control>
+			<control type="image">
+				<posx>0</posx>
+				<posy>540</posy>
+				<width>1920</width>
+				<height>20</height>
+				<texture flipy="true">script-bluray-com-white_fade_up.png</texture>
+				<colordiffuse>A0000000</colordiffuse>
+			</control>
+		</control>
+		<control type="button" id="103">
+			<description>Apply</description>
+			<onright>100</onright>
+			<posx>30</posx>
+			<posy>251</posy>
+			<width>150</width>
+			<height>40</height>
+			<visible>true</visible>
+			<font>font13</font>
+			<align>center</align>
+			<aligny>center</aligny>
+			<textoffsetx>0</textoffsetx>
+			<label>[B]APPLY[/B]</label>
+			<texturefocus>script-bluray-com-white_square.png</texturefocus>
+			<colordiffuse>FF3090FF</colordiffuse>
+			<texturenofocus></texturenofocus>
+			<textcolor>FFFFFFFF</textcolor>
+			<disabledcolor>FF555555</disabledcolor>
+			<focusedcolor>FFFFFFFF</focusedcolor>
+		</control>
+		
+		
+		<control type="group" id="200">
+			<defaultcontrol>100</defaultcontrol>
+			<posx>220</posx>
+			<posy>61</posy>
+			<control type="fixedlist" id="100">
+				<posx>0</posx>
+				<posy>0</posy>
+				<width>40</width>
+				<height>418</height>
+				<scrolltime>200</scrolltime>
+				<focusposition>5</focusposition>
+				<onright>101</onright>
+				<onleft>103</onleft>
+				<itemlayout height="38">
+					<control type="label">
+						<posx>20</posx>
+						<posy>0</posy>
+						<width>40</width>
+						<height>38</height>
+						<font>font13</font>
+						<aligny>center</aligny>
+						<textcolor>FF808080</textcolor>
+						<align>center</align>
+						<label>$INFO[ListItem.Label]</label>
+					</control>
+				</itemlayout>
+				<focusedlayout height="38">
+					<control type="image">
+						<posx>0</posx>
+						<posy>2</posy>
+						<width>40</width>
+						<height>36</height>
+						<texture>script-bluray-com-white_square.png</texture>
+						<colordiffuse>FF3090FF</colordiffuse>
+						<visible>Control.HasFocus(100)</visible>
+					</control>
+					<control type="label">
+						<posx>20</posx>
+						<posy>0</posy>
+						<width>40</width>
+						<height>38</height>
+						<font>font13</font>
+						<aligny>center</aligny>
+						<textcolor>FFFFFFFF</textcolor>
+						<align>center</align>
+						<label>$INFO[ListItem.Label]</label>
+						<visible>Control.HasFocus(100)</visible>
+					</control>
+					<control type="label">
+						<posx>20</posx>
+						<posy>0</posy>
+						<width>40</width>
+						<height>38</height>
+						<font>font13</font>
+						<aligny>center</aligny>
+						<textcolor>FF3090FF</textcolor>
+						<align>center</align>
+						<label>$INFO[ListItem.Label]</label>
+						<visible>!Control.HasFocus(100)</visible>
+					</control>
+				</focusedlayout>
+			</control>
+		</control>
+		<control type="group" id="201">
+			<defaultcontrol>101</defaultcontrol>
+			<posx>310</posx>
+			<posy>61</posy>
+			<control type="fixedlist" id="101">
+				<posx>0</posx>
+				<posy>0</posy>
+				<width>360</width>
+				<height>418</height>
+				<scrolltime>200</scrolltime>
+				<focusposition>5</focusposition>
+				<onleft>100</onleft>
+				<onright>104</onright>
+				<itemlayout height="38">
+					<control type="label">
+						<posx>170</posx>
+						<posy>0</posy>
+						<width>340</width>
+						<height>38</height>
+						<font>font13</font>
+						<aligny>center</aligny>
+						<textcolor>FF808080</textcolor>
+						<align>center</align>
+						<label>$INFO[ListItem.Label]</label>
+						<visible>!StringCompare(Window.Property(excludegenre1),1)</visible>
+					</control>
+					<control type="label">
+						<posx>170</posx>
+						<posy>0</posy>
+						<width>340</width>
+						<height>38</height>
+						<font>font13</font>
+						<aligny>center</aligny>
+						<textcolor>FF994444</textcolor>
+						<align>center</align>
+						<label>-$INFO[ListItem.Label]</label>
+						<visible>StringCompare(Window.Property(excludegenre1),1)</visible>
+					</control>
+				</itemlayout>
+				<focusedlayout height="38">
+					<control type="image">
+						<posx>0</posx>
+						<posy>2</posy>
+						<width>340</width>
+						<height>36</height>
+						<texture>script-bluray-com-white_square.png</texture>
+						<colordiffuse>FF3090FF</colordiffuse>
+						<visible>Control.HasFocus(101)</visible>
+					</control>
+					<control type="label">
+						<posx>170</posx>
+						<posy>0</posy>
+						<width>340</width>
+						<height>38</height>
+						<font>font13</font>
+						<aligny>center</aligny>
+						<textcolor>FFFFFFFF</textcolor>
+						<align>center</align>
+						<label>$INFO[ListItem.Label]</label>
+						<visible>Control.HasFocus(101) + !StringCompare(Window.Property(excludegenre1),1)</visible>
+					</control>
+					<control type="label">
+						<posx>170</posx>
+						<posy>0</posy>
+						<width>340</width>
+						<height>38</height>
+						<font>font13</font>
+						<aligny>center</aligny>
+						<textcolor>FF990000</textcolor>
+						<align>center</align>
+						<label>-$INFO[ListItem.Label]</label>
+						<visible>Control.HasFocus(101) + StringCompare(Window.Property(excludegenre1),1)</visible>
+					</control>
+					<control type="label">
+						<posx>170</posx>
+						<posy>0</posy>
+						<width>340</width>
+						<height>38</height>
+						<font>font13</font>
+						<aligny>center</aligny>
+						<textcolor>FF3090FF</textcolor>
+						<align>center</align>
+						<label>$INFO[ListItem.Label]</label>
+						<visible>!Control.HasFocus(101) + !StringCompare(Window.Property(excludegenre1),1)</visible>
+					</control>
+					<control type="label">
+						<posx>170</posx>
+						<posy>0</posy>
+						<width>340</width>
+						<height>38</height>
+						<font>font13</font>
+						<aligny>center</aligny>
+						<textcolor>FFFF0000</textcolor>
+						<align>center</align>
+						<label>-$INFO[ListItem.Label]</label>
+						<visible>!Control.HasFocus(101) + StringCompare(Window.Property(excludegenre1),1)</visible>
+					</control>
+				</focusedlayout>
+			</control>
+		</control>
+		<control type="group" id="204">
+			<defaultcontrol>104</defaultcontrol>
+			<posx>680</posx>
+			<posy>61</posy>
+			<control type="fixedlist" id="104">
+				<posx>0</posx>
+				<posy>0</posy>
+				<width>340</width>
+				<height>418</height>
+				<scrolltime>200</scrolltime>
+				<focusposition>5</focusposition>
+				<onleft>101</onleft>
+				<onright>107</onright>
+				<itemlayout height="38">
+					<control type="label">
+						<posx>170</posx>
+						<posy>0</posy>
+						<width>340</width>
+						<height>38</height>
+						<font>font13</font>
+						<aligny>center</aligny>
+						<textcolor>FF808080</textcolor>
+						<align>center</align>
+						<label>$INFO[ListItem.Label]</label>
+						<visible>!StringCompare(Window.Property(excludegenre2),1)</visible>
+					</control>
+					<control type="label">
+						<posx>170</posx>
+						<posy>0</posy>
+						<width>340</width>
+						<height>38</height>
+						<font>font13</font>
+						<aligny>center</aligny>
+						<textcolor>FF994444</textcolor>
+						<align>center</align>
+						<label>-$INFO[ListItem.Label]</label>
+						<visible>StringCompare(Window.Property(excludegenre2),1)</visible>
+					</control>
+				</itemlayout>
+				<focusedlayout height="38">
+					<control type="image">
+						<posx>0</posx>
+						<posy>2</posy>
+						<width>340</width>
+						<height>36</height>
+						<texture>script-bluray-com-white_square.png</texture>
+						<colordiffuse>FF3090FF</colordiffuse>
+						<visible>Control.HasFocus(104)</visible>
+					</control>
+					<control type="label">
+						<posx>170</posx>
+						<posy>0</posy>
+						<width>340</width>
+						<height>38</height>
+						<font>font13</font>
+						<aligny>center</aligny>
+						<textcolor>FFFFFFFF</textcolor>
+						<align>center</align>
+						<label>$INFO[ListItem.Label]</label>
+						<visible>Control.HasFocus(104) + !StringCompare(Window.Property(excludegenre2),1)</visible>
+					</control>
+					<control type="label">
+						<posx>170</posx>
+						<posy>0</posy>
+						<width>340</width>
+						<height>38</height>
+						<font>font13</font>
+						<aligny>center</aligny>
+						<textcolor>FF990000</textcolor>
+						<align>center</align>
+						<label>-$INFO[ListItem.Label]</label>
+						<visible>Control.HasFocus(104) + StringCompare(Window.Property(excludegenre2),1)</visible>
+					</control>
+					<control type="label">
+						<posx>170</posx>
+						<posy>0</posy>
+						<width>340</width>
+						<height>38</height>
+						<font>font13</font>
+						<aligny>center</aligny>
+						<textcolor>FF3090FF</textcolor>
+						<align>center</align>
+						<label>$INFO[ListItem.Label]</label>
+						<visible>!Control.HasFocus(104) + !StringCompare(Window.Property(excludegenre2),1)</visible>
+					</control>
+					<control type="label">
+						<posx>170</posx>
+						<posy>0</posy>
+						<width>340</width>
+						<height>38</height>
+						<font>font13</font>
+						<aligny>center</aligny>
+						<textcolor>FFFF0000</textcolor>
+						<align>center</align>
+						<label>-$INFO[ListItem.Label]</label>
+						<visible>!Control.HasFocus(104) + StringCompare(Window.Property(excludegenre2),1)</visible>
+					</control>
+				</focusedlayout>
+			</control>
+		</control>
+		<control type="group" id="207">
+			<defaultcontrol>104</defaultcontrol>
+			<posx>1070</posx>
+			<posy>61</posy>
+			<control type="fixedlist" id="107">
+				<posx>0</posx>
+				<posy>0</posy>
+				<width>340</width>
+				<height>418</height>
+				<scrolltime>200</scrolltime>
+				<focusposition>5</focusposition>
+				<onleft>104</onleft>
+				<onright>105</onright>
+				<itemlayout height="38">
+					<control type="label">
+						<posx>170</posx>
+						<posy>0</posy>
+						<width>340</width>
+						<height>38</height>
+						<font>font13</font>
+						<aligny>center</aligny>
+						<textcolor>FF808080</textcolor>
+						<align>center</align>
+						<label>$INFO[ListItem.Label]</label>
+						<visible>!StringCompare(Window.Property(excludegenre3),1)</visible>
+					</control>
+					<control type="label">
+						<posx>170</posx>
+						<posy>0</posy>
+						<width>340</width>
+						<height>38</height>
+						<font>font13</font>
+						<aligny>center</aligny>
+						<textcolor>FF994444</textcolor>
+						<align>center</align>
+						<label>-$INFO[ListItem.Label]</label>
+						<visible>StringCompare(Window.Property(excludegenre3),1)</visible>
+					</control>
+				</itemlayout>
+				<focusedlayout height="38">
+					<control type="image">
+						<posx>0</posx>
+						<posy>2</posy>
+						<width>340</width>
+						<height>36</height>
+						<texture>script-bluray-com-white_square.png</texture>
+						<colordiffuse>FF3090FF</colordiffuse>
+						<visible>Control.HasFocus(107)</visible>
+					</control>
+					<control type="label">
+						<posx>170</posx>
+						<posy>0</posy>
+						<width>340</width>
+						<height>38</height>
+						<font>font13</font>
+						<aligny>center</aligny>
+						<textcolor>FFFFFFFF</textcolor>
+						<align>center</align>
+						<label>$INFO[ListItem.Label]</label>
+						<visible>Control.HasFocus(107) + !StringCompare(Window.Property(excludegenre3),1)</visible>
+					</control>
+					<control type="label">
+						<posx>170</posx>
+						<posy>0</posy>
+						<width>340</width>
+						<height>38</height>
+						<font>font13</font>
+						<aligny>center</aligny>
+						<textcolor>FF990000</textcolor>
+						<align>center</align>
+						<label>-$INFO[ListItem.Label]</label>
+						<visible>Control.HasFocus(107) + StringCompare(Window.Property(excludegenre3),1)</visible>
+					</control>
+					<control type="label">
+						<posx>170</posx>
+						<posy>0</posy>
+						<width>340</width>
+						<height>38</height>
+						<font>font13</font>
+						<aligny>center</aligny>
+						<textcolor>FF3090FF</textcolor>
+						<align>center</align>
+						<label>$INFO[ListItem.Label]</label>
+						<visible>!Control.HasFocus(107) + !StringCompare(Window.Property(excludegenre3),1)</visible>
+					</control>
+					<control type="label">
+						<posx>170</posx>
+						<posy>0</posy>
+						<width>340</width>
+						<height>38</height>
+						<font>font13</font>
+						<aligny>center</aligny>
+						<textcolor>FFFF0000</textcolor>
+						<align>center</align>
+						<label>-$INFO[ListItem.Label]</label>
+						<visible>!Control.HasFocus(107) + StringCompare(Window.Property(excludegenre3),1)</visible>
+					</control>
+				</focusedlayout>
+			</control>
+		</control>
+		<control type="group" id="205">
+			<defaultcontrol>105</defaultcontrol>
+			<posx>1460</posx>
+			<posy>61</posy>
+			<control type="fixedlist" id="105">
+				<posx>0</posx>
+				<posy>0</posy>
+				<width>180</width>
+				<height>418</height>
+				<scrolltime>200</scrolltime>
+				<focusposition>5</focusposition>
+				<onleft>104</onleft>
+				<onright>106</onright>
+				<itemlayout height="38">
+					<control type="label">
+						<posx>90</posx>
+						<posy>0</posy>
+						<width>180</width>
+						<height>38</height>
+						<font>font13</font>
+						<aligny>center</aligny>
+						<textcolor>FF808080</textcolor>
+						<align>center</align>
+						<label>$INFO[ListItem.Label]</label>
+					</control>
+				</itemlayout>
+				<focusedlayout height="38">
+					<control type="image">
+						<posx>0</posx>
+						<posy>2</posy>
+						<width>180</width>
+						<height>36</height>
+						<texture>script-bluray-com-white_square.png</texture>
+						<colordiffuse>FF3090FF</colordiffuse>
+						<visible>Control.HasFocus(105)</visible>
+					</control>
+					<control type="label">
+						<posx>90</posx>
+						<posy>0</posy>
+						<width>180</width>
+						<height>38</height>
+						<font>font13</font>
+						<aligny>center</aligny>
+						<textcolor>FFFFFFFF</textcolor>
+						<align>center</align>
+						<label>$INFO[ListItem.Label]</label>
+						<visible>Control.HasFocus(105)</visible>
+					</control>
+					<control type="label">
+						<posx>90</posx>
+						<posy>0</posy>
+						<width>180</width>
+						<height>38</height>
+						<font>font13</font>
+						<aligny>center</aligny>
+						<textcolor>FF3090FF</textcolor>
+						<align>center</align>
+						<label>$INFO[ListItem.Label]</label>
+						<visible>!Control.HasFocus(105)</visible>
+					</control>
+				</focusedlayout>
+			</control>
+		</control>
+		<control type="group" id="206">
+			<defaultcontrol>106</defaultcontrol>
+			<posx>1680</posx>
+			<posy>61</posy>
+			<control type="fixedlist" id="106">
+				<posx>0</posx>
+				<posy>0</posy>
+				<width>200</width>
+				<height>418</height>
+				<scrolltime>200</scrolltime>
+				<focusposition>5</focusposition>
+				<onleft>105</onleft>
+				<itemlayout height="38">
+					<control type="label">
+						<posx>100</posx>
+						<posy>0</posy>
+						<width>200</width>
+						<height>38</height>
+						<font>font13</font>
+						<aligny>center</aligny>
+						<textcolor>FF808080</textcolor>
+						<align>center</align>
+						<label>$INFO[ListItem.Label]</label>
+					</control>
+				</itemlayout>
+				<focusedlayout height="38">
+					<control type="image">
+						<posx>0</posx>
+						<posy>2</posy>
+						<width>200</width>
+						<height>36</height>
+						<texture>script-bluray-com-white_square.png</texture>
+						<colordiffuse>FF3090FF</colordiffuse>
+						<visible>Control.HasFocus(106)</visible>
+					</control>
+					<control type="label">
+						<posx>100</posx>
+						<posy>0</posy>
+						<width>200</width>
+						<height>38</height>
+						<font>font13</font>
+						<aligny>center</aligny>
+						<textcolor>FFFFFFFF</textcolor>
+						<align>center</align>
+						<label>$INFO[ListItem.Label]</label>
+						<visible>Control.HasFocus(106)</visible>
+					</control>
+					<control type="label">
+						<posx>100</posx>
+						<posy>0</posy>
+						<width>200</width>
+						<height>38</height>
+						<font>font13</font>
+						<aligny>center</aligny>
+						<textcolor>FF3090FF</textcolor>
+						<align>center</align>
+						<label>$INFO[ListItem.Label]</label>
+						<visible>!Control.HasFocus(106)</visible>
+					</control>
+				</focusedlayout>
+			</control>
+		</control>
+	</controls>
+</window>

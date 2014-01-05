@@ -28,7 +28,19 @@ def minsToDuration(mins):
 	hrsd = hrs > 1 and 'hrs' or 'hr'
 	minsd = mins > 1 and 'mins' or 'min'
 	return '%d %s %d %s' % (hrs,hrsd,mins,minsd)
+
+def getGenreByID(ID):
+	for name, label, gid in BlurayComAPI.genres:  # @UnusedVariable
+		if gid == ID: return label
+	return ''
 	
+class LoginError(Exception):
+	def __init__(self,name,msg,code=0):
+		Exception.__init__(self, msg)
+		self.error = name
+		self.code = code
+		self.message = msg
+		
 class ResultItem:
 	_resultType = 'None'
 	_hr = '[COLOR FF606060]%s[/COLOR]' % ('_' * 200)
@@ -156,6 +168,10 @@ class ReviewsResult(ResultItem):
 		self.previous = None
 		self.next = None
 		self.categoryID = ''
+		self.genreIDs = []
+		self.sortTitle = ''
+		self.runtime = 0
+		self.watched = False
 		ResultItem.__init__(self)
 		
 	def processSoupData(self,soupData):
@@ -275,7 +291,6 @@ class CollectionResult(ReviewsResult):
 	def __init__(self,categoryid):
 		ReviewsResult.__init__(self)
 		self.categoryID = categoryid
-		self.sortTitle = ''
 		self.originalURL = ''
 		self.watched = False
 		self.json = {}
@@ -321,6 +336,12 @@ class CollectionResult(ReviewsResult):
 		self.icon = json.get('coverurl0')
 		self.setURL(json.get('url'), self.categoryID)
 		self.sortTitle = json.get('titlesort',self.title)
+		self.genreIDs = json.get('genreids','').split(',')
+		try:
+			self.runtime = int(json.get('runtime','0'))
+		except:
+			self.runtime = 0
+			 
 		rating = json.get('rating','')
 		if rating:
 			try:
@@ -919,7 +940,7 @@ class BlurayComAPI:
 					{"c":"ua","n":"Ukraine","u":"http://images.static-bluray.com/flags/UA.png"}
 				]
 	
-	genres = [	('all', u'All genres'),
+	genres = [	('all', u'-',''),
 				('action', u'Action', '1'),
 				('adventure', u'Adventure', '2'),
 				('animation', u'Animation', '3'),
@@ -1196,13 +1217,10 @@ class BlurayComAPI:
 		return not 'error' in req.json()
 	
 	def getPriceTracking(self):
-		print 'START'
 		if not self.apiLogin(): return
-		print 'LOGGED IN'
 		items = []
 		req = requests.get(self.myPriceTrackerURL.format(session_id=self.sessionID))
 		json = req.json()
-		print json
 		if not 'items' in json:
 			if not self.apiLogin(force=True): return []
 			req = requests.get(self.myPriceTrackerURL.format(session_id=self.sessionID))
@@ -1299,7 +1317,14 @@ class BlurayComAPI:
 		gcmregid = 'APA91bFQmwwEyckSUXeZ_oMygU77-L330OjNg3tFGbAtWQQPPmhU_w7JRJ0PFUSd1gyvkGgsrPCJVhGsrISTaMFeK9YnRlmkMGWmKcfdh7EQq2185W6MPniKxRE7Us6nSs1LrgqC2N_KJF8cMBKLtSiwjUFY5XG5Hw'
 		req = requests.post(self.apiLoginURL,data={'u':self.user,'p':self.md5password,'ak':ak,'gcmregid':gcmregid})
 		json = req.json()
-		if 'session' in json: self.sessionID = json['session']
+		self.sessionID = ''
+		if 'session' in json:
+			self.sessionID = json['session']
+		else:
+			if str(json.get('error')) == '4':
+				raise LoginError('userpass','Bad username or password')
+			else:
+				raise LoginError('unknown','Unknown',code=-1)
 		return self.apiLoggedOn()
 		
 	def apiLoggedOn(self):
