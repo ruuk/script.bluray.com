@@ -341,7 +341,7 @@ class CollectionResult(ReviewsResult):
 			self.runtime = int(json.get('runtime','0'))
 		except:
 			self.runtime = 0
-			 
+
 		rating = json.get('rating','')
 		if rating:
 			try:
@@ -462,6 +462,8 @@ class Review(ReviewsResult):
 		self.subheading1 = ''
 		self.subheading2 = ''
 		self.owned = False
+		self.imdb = ''
+		self.imdbVideos = []
 		self.url = url
 		self.ID = self.url.strip('/').rsplit('/')[-1]
 		
@@ -602,7 +604,14 @@ class SiteReview(Review):
 			
 		for p in soupData.findAll('p'):
 			p.replaceWith(p.getText() + '[CR]')
-			
+		
+		try:
+			self.imdb = soupData.find('a',{'href':lambda x: x and 'www.imdb.com/title/' in x}).get('href','')
+			print self.imdb
+		except:
+			pass
+		if self.imdb: self.imdbVideos = getIMDBVideoIDs(self.imdb)
+		
 		specH3 = soupData.find('h3',text='Specifications')
 		if specH3:
 			for sibling in specH3.next_siblings:
@@ -782,6 +791,46 @@ class SiteReview(Review):
 		self.convertHeaders(self.reviewSoupData, table, 'h5',no_cr=True)
 		self.convertBR(table)
 		return self.cleanWhitespace(table.getText().strip())
+
+def getIMDBVideoIDs(url):
+	#'http://www.imdb.com/video/imdb/vi2165155865/imdbvideo?format=720p'
+	try:
+		headers = {'User-Agent':'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1312.57 Safari/537.17'}
+		soup = bs4.BeautifulSoup(requests.get(url,headers=headers).text)
+		try:
+			defImage = soup.find('meta',{'property':'og:image'}).get('content','')
+		except:
+			defImage = ''
+		IDs = []
+		for i in soup.findAll('a',{'data-video':lambda x: x}):
+			if 'offsite?' in i.get('href',''): continue
+			ID = i.get('data-video')
+			img = i.find('img')
+			tn = img and img.get('loadlate') or defImage
+			if ID: IDs.append((ID,tn))
+		print IDs
+		return IDs
+	except:
+		pass
+	return []
+
+def playIMDBVideo(ID):
+	try:
+		import xbmc, xbmcgui
+		#formats: 720p etc
+		url = 'http://www.imdb.com/video/imdb/{video_id}/imdbvideo?format={format}'.format(video_id=ID,format='720p')
+		headers = {'User-Agent':'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1312.57 Safari/537.17'}
+		flvURL = re.findall('"url":"([^"]*)"',requests.get(url,headers=headers).text)[0]
+		title = ''
+		thumbnail = ''
+		plot = ''
+		listitem = xbmcgui.ListItem(title, iconImage="", thumbnailImage=thumbnail)
+		# set the key information
+		listitem.setInfo('video', {'title': title, 'label': title, 'plot': plot, 'plotOutline': plot})
+		xbmc.Player().play(flvURL, listitem)
+	except:
+		LOG('ERROR: playIMDBVideo()')
+	
 
 def removeColorTags(text):
 	return re.sub('\[/?COLOR[^\]]*?\]','',text)

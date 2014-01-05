@@ -6,6 +6,7 @@
 		<system>1</system>
 		<posx>0</posx>
 		<posy>0</posy>
+		<origin x="1920" y="0">Player.Playing + Player.HasVideo</origin>
 	</coordinates>
 	<controls>
 		<control type="image">
@@ -125,6 +126,15 @@
 							<texture fallback="script-bluray-com-no_cover.png">$INFO[ListItem.Property(back)]</texture>
 						</control>
 					</control>
+					<control type="image">
+						<posx>155</posx>
+						<posy>45</posy>
+						<width>100</width>
+						<height>100</height>
+						<texture>script-bluray-com-play.png</texture>
+						<colordiffuse>FFFFFFFF</colordiffuse>
+						<visible>StringCompare(ListItem.Property(video),1)</visible>
+					</control>
 				</itemlayout>
 				<focusedlayout height="217">
 					<control type="image">
@@ -162,6 +172,15 @@
 							<aspectratio align="right">keep</aspectratio>
 							<texture fallback="script-bluray-com-no_cover.png">$INFO[ListItem.Property(back)]</texture>
 						</control>
+					</control>
+					<control type="image">
+						<posx>155</posx>
+						<posy>45</posy>
+						<width>100</width>
+						<height>100</height>
+						<texture>script-bluray-com-play.png</texture>
+						<colordiffuse>FFFFFFFF</colordiffuse>
+						<visible>StringCompare(ListItem.Property(video),1)</visible>
 					</control>
 				</focusedlayout>
 			</control>

@@ -457,6 +457,11 @@ class BluRayReview(BaseWindowDialog):
 			self.infoText.setText(('[CR][B]%s[/B][CR]' % ('_' * 200)).join(filter(bool,[review.price,review.blurayRating,review.overview,review.specifications])))
 			
 			items = []
+			for ID,tn in review.imdbVideos:
+				item = xbmcgui.ListItem(iconImage=tn)
+				item.setProperty('video','1')
+				item.setProperty('id',ID)
+				items.append(item)
 			for url,url_1080p in review.images:
 				item = xbmcgui.ListItem(iconImage=url)
 				item.setProperty('1080p',url_1080p)
@@ -517,7 +522,10 @@ class BluRayReview(BaseWindowDialog):
 		if controlID == 102:
 			item = self.imagesList.getSelectedItem()
 			if not item: return
-			openWindow(ImageViewer, 'bluray-com-image.xml',url=item.getProperty('1080p'),front=item.getProperty('frontLarge'),back=item.getProperty('back'))
+			if item.getProperty('video'):
+				bluraycomapi.playIMDBVideo(item.getProperty('id'))
+			else:
+				openWindow(ImageViewer, 'bluray-com-image.xml',url=item.getProperty('1080p'),front=item.getProperty('frontLarge'),back=item.getProperty('back'))
 		elif controlID == 134:
 			item = self.altList.getSelectedItem()
 			if not item: return

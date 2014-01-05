@@ -6,6 +6,7 @@
 		<system>1</system>
 		<posx>0</posx>
 		<posy>0</posy>
+		<origin x="1920" y="0">Player.Playing + Player.HasVideo</origin>
 	</coordinates>
 	<controls>
 		<control type="group">
