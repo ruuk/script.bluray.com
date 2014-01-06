@@ -593,7 +593,7 @@ class SiteReview(Review):
 		subheading = soupData.find('span',{'class':'subheading'})
 		if subheading: self.subheading1 = subheading.getText().strip()
 		
-		coverImg = soupData.find('img',{'id':'productimage'})
+		coverImg = soupData.find('img',{'id':'productimage','src': lambda x: not '.gif' in x})
 		if not coverImg: coverImg = soupData.find('meta',{'property':lambda x: x and ('image' in x)})
 		if not coverImg: coverImg = soupData.find('meta',{'itemprop':lambda x: x and ('image' in x)})
 		
@@ -724,7 +724,7 @@ class SiteReview(Review):
 			for sib in start.parent.next_siblings:
 				if sib.name == 'a' and 'history' in sib.get('rel',''):
 					break
-				elif sib.name and sib.find('img'):
+				elif sib.name and sib.find('img',{'src':lambda x: not '.gif' in x}):
 					url = sib.find('img').get('src','')
 					self.images.append((url,url.replace('_tn.','_original.')))
 					review += '[CR][COLOR FFA00000]IMAGE %s[/COLOR][CR]' % idx
