@@ -724,8 +724,8 @@ class SiteReview(Review):
 			for sib in start.parent.next_siblings:
 				if sib.name == 'a' and 'history' in sib.get('rel',''):
 					break
-				elif sib.name and sib.find('img',{'src':lambda x: not '.gif' in x}):
-					url = sib.find('img').get('src','')
+				elif sib.name and '/products/reviews/' in sib.get('href',''):
+					url = sib.get('href','').replace('.jpg','_tn.jpg')
 					self.images.append((url,url.replace('_tn.','_original.')))
 					review += '[CR][COLOR FFA00000]IMAGE %s[/COLOR][CR]' % idx
 					idx += 1
