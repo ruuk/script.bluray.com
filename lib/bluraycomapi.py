@@ -1,4 +1,4 @@
-import sys, hashlib, time
+import sys, time, threadpool
 if sys.version < '2.7.3': #If crappy html.parser, use internal version. Using internal version on ATV2 crashes as of XBMC 12.2, so that's why we test version
 	print 'Blu-ray.com: Using internal HTMLParser'
 	import HTMLParser # @UnusedImport
@@ -584,6 +584,16 @@ class SiteReview(Review):
 		self.reviewSoupData = reviewSoupData
 		
 	def processSoupData(self,soupData):
+		try:
+			self.imdb = soupData.find('a',{'href':lambda x: x and 'www.imdb.com/title/' in x}).get('href','')
+		except:
+			pass
+		pool = None
+		if self.imdb:
+			pool = threadpool.ThreadPool(1)
+			reqs = threadpool.makeRequests(getIMDBVideoIDs, [self.imdb])
+			[pool.putRequest(req) for req in reqs]
+		
 		self.owned = bool(soupData.find('a',{'href':lambda x: x and ('/collection.php' in x) and ('action=showcategory' in x)}))		
 		self.title = soupData.find('title').getText(strip=True)
 		
@@ -604,12 +614,6 @@ class SiteReview(Review):
 			
 		for p in soupData.findAll('p'):
 			p.replaceWith(p.getText() + '[CR]')
-		
-		try:
-			self.imdb = soupData.find('a',{'href':lambda x: x and 'www.imdb.com/title/' in x}).get('href','')
-		except:
-			pass
-		if self.imdb: self.imdbVideos = getIMDBVideoIDs(self.imdb)
 		
 		specH3 = soupData.find('h3',text='Specifications')
 		if specH3:
@@ -754,6 +758,11 @@ class SiteReview(Review):
 			src = i.get('src','')
 			self.images.append((src.replace('_tn.','.'),src.replace('_tn.','_1080p.')))
 			
+		if pool:
+			results = pool.wait(return_results=True)
+			pool.dismissWorkers()
+			self.imdbVideos = results[0]
+			
 	def getReviews(self):
 		reviewH3 = self.reviewSoupData.find('h3',text='Post a review')
 		if reviewH3:
@@ -805,7 +814,7 @@ def getIMDBVideoIDs(url):
 			if 'offsite?' in i.get('href',''): continue
 			ID = i.get('data-video')
 			img = i.find('img')
-			tn = img and img.get('loadlate') or defImage
+			tn = img and img.get('loadlate',img.get('src')) or defImage
 			if ID: IDs.append((ID,tn))
 		return IDs
 	except:
@@ -1141,18 +1150,29 @@ class BlurayComAPI:
 		#fixed = re.sub('<br[^>]*?>(?i)','[CR]',fixed)
 		return bs4.BeautifulSoup(fixed,self.parser,from_encoding=self.siteEncoding)
 	
-	def getReview(self,url,catID):
-		if str(catID) == '20':
-			req = self.session().get(url + '?show=preview')
-		else:
-			req = self.session().get(url)
+	def _getReviewData(self,data):
+		req = self.session().get(data['url'])
+		data['soup'] = self.makeReviewSoup(req)
+		return data
 		
-		soup = self.makeReviewSoup(req)
+	def getReview(self,url,catID):
+		url1 = url
+		if str(catID) == '20': url1 = url + '?show=preview'		
 		if '/www.' in url:
-			soup2 = self.makeReviewSoup(self.session().get(url + '?show=userreviews'))
+			pool = threadpool.ThreadPool(2)
+			reqs = threadpool.makeRequests(self._getReviewData, [{'idx':0,'url':url1},{'idx':1,'url':url + '?show=userreviews'}])
+			[pool.putRequest(req) for req in reqs]
+			results = pool.wait(return_results=True)
+			pool.dismissWorkers()
+			if results[0]['idx'] == 0:
+				soup = results[0]['soup']
+				soup2 = results[1]['soup']
+			else:
+				soup = results[1]['soup']
+				soup2 = results[0]['soup']
 			return SiteReview(soup2,url).start(soup)
 		else:
-			return Review(url).start(soup)
+			return Review(url).start(self._getReviewData(url1))
 	
 	def getCollection(self,categories):
 		'''
