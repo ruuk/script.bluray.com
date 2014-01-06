@@ -535,7 +535,9 @@ class BluRayReview(BaseWindowDialog):
 			
 	def onAction(self,action):
 		try:
-			if action == 9 or action == 10:
+			if xbmc.getCondVisibility('Player.Playing + Player.HasVideo'):
+				pass
+			elif action == 9 or action == 10:
 				self.doClose()
 			elif action == 117:
 				self.doMenu()
