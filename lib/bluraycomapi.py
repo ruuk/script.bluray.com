@@ -607,7 +607,6 @@ class SiteReview(Review):
 		
 		try:
 			self.imdb = soupData.find('a',{'href':lambda x: x and 'www.imdb.com/title/' in x}).get('href','')
-			print self.imdb
 		except:
 			pass
 		if self.imdb: self.imdbVideos = getIMDBVideoIDs(self.imdb)
@@ -808,7 +807,6 @@ def getIMDBVideoIDs(url):
 			img = i.find('img')
 			tn = img and img.get('loadlate') or defImage
 			if ID: IDs.append((ID,tn))
-		print IDs
 		return IDs
 	except:
 		pass

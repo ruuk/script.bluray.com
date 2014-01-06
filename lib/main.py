@@ -463,6 +463,7 @@ class BluRayReview(BaseWindowDialog):
 				item.setProperty('id',ID)
 				items.append(item)
 			for url,url_1080p in review.images:
+				print url
 				item = xbmcgui.ListItem(iconImage=url)
 				item.setProperty('1080p',url_1080p)
 				items.append(item)
