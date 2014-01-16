@@ -149,3 +149,7 @@ msgctxt "#32035"
 msgid "Enter Search Terms"
 msgstr ""
 
+msgctxt "#32036"
+msgid "Mark Watched NOW"
+msgstr ""
+

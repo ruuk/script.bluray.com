@@ -129,6 +129,34 @@
 							<height>20</height>
 							<texture>$INFO[ListItem.Property(ratingImage)]</texture>
 						</control>
+						<control type="image">
+							<posx>1826</posx>
+							<posy>50</posy>
+							<width>64</width>
+							<height>64</height>
+							<texture>$INFO[ListItem.Property(catIcon)]</texture>
+						</control>
+						<control type="image">
+							<posx>1756</posx>
+							<posy>50</posy>
+							<width>64</width>
+							<height>64</height>
+							<texture>$INFO[ListItem.Property(catIcon1)]</texture>
+						</control>
+						<control type="image">
+							<posx>1686</posx>
+							<posy>50</posy>
+							<width>64</width>
+							<height>64</height>
+							<texture>$INFO[ListItem.Property(catIcon2)]</texture>
+						</control>
+						<control type="image">
+							<posx>1616</posx>
+							<posy>50</posy>
+							<width>64</width>
+							<height>64</height>
+							<texture>$INFO[ListItem.Property(catIcon3)]</texture>
+						</control>
 						<control type="label">
 							<posx>158</posx>
 							<posy>0</posy>
@@ -302,6 +330,34 @@
 							<width>110</width>
 							<height>20</height>
 							<texture>$INFO[ListItem.Property(ratingImage)]</texture>
+						</control>
+						<control type="image">
+							<posx>1826</posx>
+							<posy>50</posy>
+							<width>64</width>
+							<height>64</height>
+							<texture>$INFO[ListItem.Property(catIcon)]</texture>
+						</control>
+						<control type="image">
+							<posx>1756</posx>
+							<posy>50</posy>
+							<width>64</width>
+							<height>64</height>
+							<texture>$INFO[ListItem.Property(catIcon1)]</texture>
+						</control>
+						<control type="image">
+							<posx>1686</posx>
+							<posy>50</posy>
+							<width>64</width>
+							<height>64</height>
+							<texture>$INFO[ListItem.Property(catIcon2)]</texture>
+						</control>
+						<control type="image">
+							<posx>1616</posx>
+							<posy>50</posy>
+							<width>64</width>
+							<height>64</height>
+							<texture>$INFO[ListItem.Property(catIcon3)]</texture>
 						</control>
 						<control type="label">
 							<posx>158</posx>

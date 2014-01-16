@@ -5,7 +5,7 @@
 		<setting label="32014" type="action" id="pass" default="" option="hidden" action="RunScript(script.bluray.com,get_password)"/>
 	</category>
 	<category label="32022">
-		<setting id="default_collection" type="enum" label="32020" values="All|Blu-ray|DVD|PS3|PS4|XBox 360|XBox One|Wii|Wii U|Theatrical|UltraViolet|Amazon|iTunes" default="0" />
+		<setting id="default_collection" type="enum" label="32020" values="All|Movies|Games|Blu-ray|DVD|PS3|PS4|XBox 360|XBox One|Wii|Wii U|Theatrical|UltraViolet|Amazon|iTunes" default="0" />
 		<setting label="32034" type="lsep" />
 		<setting id="all_cat_7" type="bool" label="Blu-ray" default="true" />
 		<setting id="all_cat_21" type="bool" label="DVD" default="false" />
@@ -19,6 +19,20 @@
 		<setting id="all_cat_24" type="bool" label="UltraViolet" default="false" />
 		<setting id="all_cat_28" type="bool" label="Amazon" default="false" />
 		<setting id="all_cat_31" type="bool" label="iTunes" default="false" />
+		<setting label="Movies" type="lsep" />
+		<setting id="movies_cat_7" type="bool" label="Blu-ray" default="true" />
+		<setting id="movies_cat_21" type="bool" label="DVD" default="false" />
+		<setting id="movies_cat_20" type="bool" label="Theatrical" default="false" />
+		<setting id="movies_cat_24" type="bool" label="UltraViolet" default="false" />
+		<setting id="movies_cat_28" type="bool" label="Amazon" default="false" />
+		<setting id="movies_cat_31" type="bool" label="iTunes" default="false" />
+		<setting label="Games" type="lsep" />
+		<setting id="games_cat_16" type="bool" label="PS3" default="false" />
+		<setting id="games_cat_29" type="bool" label="PS4" default="false" />
+		<setting id="games_cat_23" type="bool" label="XBox 360" default="false" />
+		<setting id="games_cat_30" type="bool" label="XBox One" default="false" />
+		<setting id="games_cat_26" type="bool" label="Wii" default="false" />
+		<setting id="games_cat_27" type="bool" label="Wii U" default="false" />
 	</category>
 	<category label="32023">
 		<setting label="32024" type="lsep" />

@@ -1,4 +1,4 @@
-import os, sys, shutil, requests
+import os, sys, shutil, requests, time
 import xbmc, xbmcgui, xbmcaddon
 import bluraycomapi
 
@@ -6,8 +6,10 @@ ADDON = xbmcaddon.Addon()
 T = ADDON.getLocalizedString
 
 CACHE_PATH = os.path.join(xbmc.translatePath(ADDON.getAddonInfo('profile')),'cache')
+LOCAL_STORAGE_PATH = os.path.join(xbmc.translatePath(ADDON.getAddonInfo('profile')),'local')
 
 if not os.path.exists(CACHE_PATH): os.makedirs(CACHE_PATH)
+if not os.path.exists(LOCAL_STORAGE_PATH): os.makedirs(LOCAL_STORAGE_PATH)
 
 API = None
 LAST_SEARCH = ''
@@ -103,6 +105,7 @@ class BluRayReviews(BaseWindowDialog):
 		self.filterGenre2Exclude = False
 		self.filterGenre3Exclude = False
 		self.filterString = ''
+		self._savedSelectionIDX = 0
 	
 	def onInit(self):
 		BaseWindowDialog.onInit(self)
@@ -110,31 +113,44 @@ class BluRayReviews(BaseWindowDialog):
 		self.loading = self.getControl(149)
 		self.showReviews()
 	
-	def refresh(self,page=0,category=None,filterChange=False):
+	def refresh(self,page=0,category=None,filterChange=False,force=False):
 		self.reviewList.reset()
-		self.showReviews(page=page,category=category,filterChange=filterChange)
+		self.showReviews(page=page,category=category,filterChange=filterChange,force=force)
 		
 	def getCollectionCategories(self,category=None):
 		if category is not None:
 			default = category
 		else:
 			default = getSetting('default_collection',0)
-			if default > 0: default = API.categories[default-1][0]
+			if default > 2:
+				default = API.categories[default-3][0]
+			else:
+				default = 0 - default
 		if default == 0:
 			cats = []
 			for ID,cat in API.categories:  # @UnusedVariable
 				if getSetting('all_cat_%d' % ID,False): cats.append(ID)
 			return cats
+		elif default == -1:
+			cats = []
+			for ID,cat in API.categories:  # @UnusedVariable
+				if getSetting('movies_cat_%d' % ID,False): cats.append(ID)
+			return cats
+		elif default == -2:
+			cats = []
+			for ID,cat in API.categories:  # @UnusedVariable
+				if getSetting('games_cat_%d' % ID,False): cats.append(ID)
+			return cats
 		else:
 			return [default]
-	
+
 	def getCollectionCategoriesToShow(self):
 		cats = []
 		for ID,cat in API.categories:
 			if getSetting('used_cat_%d' % ID,False): cats.append((ID,cat))
 		return cats
 
-	def showReviews(self,page=0,category=None,filterChange=False):
+	def showReviews(self,page=0,category=None,filterChange=False,force=False):
 		self.setProperty('filterstring',self.filterString)
 		self.loadingOn()
 		try:
@@ -167,7 +183,7 @@ class BluRayReviews(BaseWindowDialog):
 					results = self.currentResults
 				else:
 					try:
-						results = API.getCollection(categories=self.getCollectionCategories(category))
+						results = API.getCollection(categories=self.getCollectionCategories(category),force_refresh=force)
 					except bluraycomapi.LoginError, e:
 						error = 'Unknown'
 						if e.error == 'userpass': error = 'Bad Blu-ray.com name or password.'
@@ -193,11 +209,13 @@ class BluRayReviews(BaseWindowDialog):
 				item.setProperty('page',paging[0])
 				items.append(item)
 				self.idxOffset = 1
-				
+			titles = set()
 			for i in results:
 				if i._section: items.append(self.addSection(i))
-				if not self.filter(i):
-					continue
+				if not self.filter(i): continue
+				if i.title in titles:
+					if self.addDuplicate(items,i): continue
+				titles.add(i.title)
 				item = xbmcgui.ListItem(label=i.title,iconImage=i.icon)
 				self.setUpItem(item, i)
 				items.append(item)
@@ -212,7 +230,7 @@ class BluRayReviews(BaseWindowDialog):
 			self.setFocus(self.reviewList)
 		finally:
 			self.loadingOff()
-
+		
 	def filter(self,i):
 		if self.filterGenre1:
 			if self.filterGenre1Exclude:
@@ -243,37 +261,51 @@ class BluRayReviews(BaseWindowDialog):
 			item.setLabel(T(32018))
 		return item
 	
+	def addDuplicate(self,items,dup):
+		for i in items:
+			if dup.title == i.getProperty('title'):
+				cats = i.getProperty('cats')
+				catID = str(dup.categoryID)
+				if catID in cats.split(','): return False
+				dups = i.getProperty('dups')
+				dups = dups and dups.split('\t') or []
+				dups.append(dup.internalID)
+				i.setProperty('dups','\t'.join(dups))
+				i.setProperty('catIcon%s' % len(dups),dup.catIcon)
+				cats += ',' + catID
+				i.setProperty('cats',cats)
+				return True
+		return False
+			
+	
 	def setUpItem(self,item,i):
 		item.setProperty('id',i.ID)
-		item.setProperty('description',i.description)
+		item.setProperty('title',i.title)
 		item.setProperty('info',i.info)
 		item.setProperty('genre',i.genre)
 		item.setProperty('rating',i.rating)
 		item.setProperty('ratingImage',i.ratingImage)
 		item.setProperty('url',i.url)
 		item.setProperty('flag',i.flagImage)
-		item.setProperty('catID',str(i.categoryID))
+		item.setProperty('catIcon',i.catIcon)
+		item.setProperty('_id',i.internalID)
+		catID = str(i.categoryID)
+		item.setProperty('catID',catID)
+		item.setProperty('cats',catID)
+		description = ''
+		if i._resultType == 'COLLECTION':
+			if i.watched:
+				try:
+					if not i.dateWatched: raise Exception()
+					description = '%s: %s\n' % (T(32011),time.strftime('%b %d, %Y',time.localtime(i.dateWatched)))
+				except:
+					description = '%s: %s\n' % (T(32011), T(32012))
+		description += i.description
+		item.setProperty('description',description)
 				
 	def doMenu(self):
 		if self.mode == 'COLLECTION':
-			result = self.getCurrentItemResult()
-			if not result: return
-			m = ChoiceList(T(32028))
-			m.addItem('remove',T(32029))
-			if result.watched:
-				m.addItem('unmarkwatched',T(32033))
-			else:
-				m.addItem('markwatched',T(32032))
-				
-			ID = m.getResult()
-			if ID is None: return
-			if ID == 'markwatched':
-				self.toggleWatched(True)
-			elif ID == 'unmarkwatched':
-				self.toggleWatched(False)
-			elif ID == 'remove':
-				self.removeFromCollection()
-
+			if not self.doCollectionContext(): return
 		elif self.mode == 'PRICETRACKER':
 			items = [T(32029),T(32030)]
 			idx = xbmcgui.Dialog().select(T(32028),items)
@@ -286,26 +318,79 @@ class BluRayReviews(BaseWindowDialog):
 		elif self.mode == 'SEARCH':
 			self.showReviews()
 
+	def doCollectionContext(self):
+		results = self.getCurrentItemResult()
+		if not results: return
+		m = ChoiceList(T(32028))
+		base = '{label}'
+		if len(results) > 1: base = '[B]{label}[/B] ({cat})'
+		for result in results:
+			cat = self.getCategoryName(result.categoryID)
+			m.addItem(('remove',result),base.format(cat=cat,label=T(32029)))
+			if result.watched:
+				m.addItem(('unmarkwatched',result),base.format(cat=cat,label=T(32033)))
+			else:
+				m.addItem(('markwatched',result),base.format(cat=cat,label=T(32032)))
+			m.addItem(('markwatchednow',result),base.format(cat=cat,label=T(32036)))
+		choice = m.getResult()
+		if choice is None: return
+		if choice[0] == 'markwatched':
+			self.toggleWatched(True,result=choice[1])
+		elif choice[0] == 'markwatchednow':
+			self.toggleWatched(time.time(),result=choice[1])
+		elif choice[0] == 'unmarkwatched':
+			self.toggleWatched(False,result=choice[1])
+		elif choice[0] == 'remove':
+			self.removeFromCollection(result=choice[1])
+		return True
+				
 	def changeCategory(self):
 		m = ChoiceSlideout(T(32028))
 		m.addItem('all',T(32031))
+		m.addItem('movies','Movies')
+		m.addItem('games','Games')
 		for cat_id, cat in self.getCollectionCategoriesToShow(): # @UnusedVariable
 			m.addItem(cat_id,cat)
+		m.addSep()
+		m.addItem('refresh','[B]Update Collection[/B]')
 		ID = m.getResult()
 		if ID is None: return
 		if ID == 'all':
 			self.refresh(category=0)
+		elif ID == 'movies':
+			self.refresh(category=-1)
+		elif ID == 'games':
+			self.refresh(category=-2)
+		elif ID == 'refresh':
+			self.refresh(category=self.lastCategory,force=True)
 		else:
 			self.refresh(category=ID)
 				
 	def getCurrentItemResult(self):
-		results = filter(self.filter,self.currentResults)
-		idx = self.reviewList.getSelectedPosition()
-		if idx < self.idxOffset: return
-		idx += self.idxOffset
-		if idx > len(results): return
-		result = results[idx]
-		return result
+		item = self.reviewList.getSelectedItem()
+		if not item: return
+		ID = item.getProperty('_id')
+		if ID:
+			results = []
+			all_ = item.getProperty('dups')
+			all_ = all_ and all_.split('\t') or []
+			all_.insert(0,ID)
+			for r in self.currentResults:
+				if r.internalID in all_:
+					results.append(r)
+					all_.remove(r.internalID)
+					if not all_: return results
+			print all_
+			LOG('ERROR: getCurrentItemResult(): Failed to select result(s)')
+			return results
+		else:
+			results = filter(self.filter,self.currentResults)
+			idx = self.reviewList.getSelectedPosition()
+			if idx < self.idxOffset: return
+			idx += self.idxOffset
+			if idx > len(results): return
+			result = results[idx]
+		return [result]
 			
 	def openFilterWindow(self):
 		w = openWindow(BluRayFilter,'bluray-com-filter.xml',return_window=True)
@@ -340,7 +425,7 @@ class BluRayReviews(BaseWindowDialog):
 		try:
 			result = self.getCurrentItemResult()
 			if not result: return
-			succeeded = API.unTrackPrice(result.itemID)
+			succeeded = API.unTrackPrice(result[0].itemID)
 		finally:
 			self.loadingOff()
 			
@@ -352,6 +437,7 @@ class BluRayReviews(BaseWindowDialog):
 		try:
 			result = self.getCurrentItemResult()
 			if not result: return
+			result = result[0]
 			succeeded = trackPrice(result.trackingID,result.itemID,price=result.myPrice)
 		finally:
 			self.loadingOff()
@@ -359,16 +445,24 @@ class BluRayReviews(BaseWindowDialog):
 		if succeeded:
 			self.refresh()
 	
-	def toggleWatched(self,watched=None):
+	def toggleWatched(self,watched=None,result=None):
 		self.loadingOn()
 		succeeded = False
 		try:
-			result = self.getCurrentItemResult()
-			if not result: return
+			if not result:
+				result = self.getCurrentItemResult()
+				if not result: return
+				result = result[0]
 			if watched is None:
 				result.json['watched'] = result.json.get('watched') != '1' and '1' or ''
 			else:
-				result.json['watched'] = watched and '1' or ''
+				if watched:
+					result.json['watched'] = '1'
+					if watched != True: result.json['dtwatched'] = str(int(watched))
+				else:
+					result.json['watched'] = ''
+					result.json['dtwatched'] = '0'
+					
 			succeeded = API.updateCollectable(result.json)
 		finally:
 			self.loadingOff()
@@ -379,21 +473,45 @@ class BluRayReviews(BaseWindowDialog):
 			self.setUpItem(item, result)
 			self.setFocus(self.reviewList)
 		
-	def removeFromCollection(self):
-		result = self.getCurrentItemResult()
-		if not result: return
-		yes = xbmcgui.Dialog().yesno('Really Delete?','Really remove:',result.title,'from your collection?')
+	def getCategoryName(self,catID):
+		catID = str(catID)
+		for ID, name in API.categories:
+			if str(ID) == catID: return name
+		return '?'
+		
+	def removeFromCollection(self,result=None):
+		if not result:
+			result = self.getCurrentItemResult()
+			if not result: return
+			result = result[0]
+		yes = xbmcgui.Dialog().yesno('Really Delete?','Really remove:',result.title,'from your %s collection?' % self.getCategoryName(result.categoryID))
 		if not yes: return
 		self.loadingOn()
 		succeeded = False
 		try:
-			succeeded = API.deleteCollectable(result.ID)
+			succeeded = API.deleteCollectable(result.ID,result.categoryID)
 		finally:
 			self.loadingOff()
 			
 		if succeeded:
-			self.refresh(category=self.lastCategory)
+			self.saveSelection()
+			self.refresh(category=self.lastCategory,force=True)
+			self.restoreSelection()
+		else:
+			LOG('Failed to remove item from collection')
 
+	def saveSelection(self):
+		idx = self.reviewList.getSelectedPosition()
+		if idx < 0: idx = 0
+		self._savedSelectionIDX = idx
+		
+	def restoreSelection(self):
+		if not self._savedSelectionIDX < self.reviewList.size():
+			self._savedSelectionIDX = 0
+			return
+		self.reviewList.selectItem(self._savedSelectionIDX)
+		self._savedSelectionIDX = 0
+		
 	def onClick(self,controlID):
 		if controlID == 101:
 			item = self.reviewList.getSelectedItem()
@@ -402,7 +520,17 @@ class BluRayReviews(BaseWindowDialog):
 				if item.getProperty('paging') == 'section': return
 				self.refresh(page=item.getProperty('page'))
 			else:
-				openWindow(BluRayReview, 'bluray-com-review.xml',url=item.getProperty('url'),cat_id=item.getProperty('catID'))
+				results = self.getCurrentItemResult()
+				if not results: return
+				if len(results) > 1:
+					m = FormatDialog('Format')
+					for r in results:
+						m.addItem(r, self.getCategoryName(r.categoryID), r.icon, r.catIcon)
+					result = m.getResult()
+				else:
+					result = results[0]
+				if not result: return
+				openWindow(BluRayReview, 'bluray-com-review.xml',url=result.url,cat_id=result.categoryID)
 				
 	def onAction(self,action):
 		try:
@@ -647,6 +775,7 @@ class BluRayFilter(BaseWindowDialog):
 		self.timeList = self.getControl(105)
 		self.wathcedList = self.getControl(106)
 		self.setup()
+		self.setFocus(self.letterList)
 		
 	def setup(self):
 		self.setProperty('excludegenre1',self.genre1Exclude and '1' or '')
@@ -805,12 +934,18 @@ class BluRaySelect(BaseWindowDialog):
 		BaseWindowDialog.onInit(self)
 		self.itemList = self.getControl(100)
 		self.fillItems()
+		self.setFocus(self.itemList)
 		
 	def fillItems(self):
 		
 		items = []
-		for label in self.items:  # @UnusedVariable
-			item = xbmcgui.ListItem(label=label)
+		for i in self.items:  # @UnusedVariable
+			item = xbmcgui.ListItem(label=i['label'])
+			if not i['id']:
+				item.setProperty('separator','1')
+			else:
+				item.setProperty('icon1',i['icon1'])
+				item.setProperty('icon2',i['icon2'])
 			items.append(item)
 		self.itemList.addItems(items)
 				
@@ -821,6 +956,8 @@ class BluRaySelect(BaseWindowDialog):
 			
 	def onClick(self,controlID):
 		if controlID == 100:
+			item = self.itemList.getSelectedItem()
+			if item and item.getProperty('separator'): return
 			self.setSelection()
 			self.doClose()
 			
@@ -860,8 +997,8 @@ class ChoiceList:
 		self.caption = caption
 		self.items = []
 		
-	def addItem(self,ID,label):
-		self.items.append({'id':ID,'label':label})
+	def addItem(self,ID,label,icon1='',icon2=''):
+		self.items.append({'id':ID,'label':label,'icon1':icon1,'icon2':icon2})
 		
 	def addSep(self):
 		self.items.append({'id':None,'label':' '})
@@ -875,9 +1012,15 @@ class ChoiceList:
 		
 class ChoiceSlideout(ChoiceList):
 	def getResult(self):
-		items = []
-		for i in self.items: items.append(i['label'])
-		w = openWindow(BluRaySelect,'bluray-com-select.xml',return_window=True,items=items)
+		w = openWindow(BluRaySelect,'bluray-com-select.xml',return_window=True,items=self.items)
+		idx = w.selection
+		del w
+		if idx == None: return
+		return self.items[idx]['id']
+	
+class FormatDialog(ChoiceList):
+	def getResult(self):
+		w = openWindow(BluRaySelect,'bluray-com-format_select.xml',return_window=True,items=self.items)
 		idx = w.selection
 		del w
 		if idx == None: return
@@ -962,7 +1105,7 @@ def main():
 								'watched':T(32011),
 								'yes':T(32012)
 							})
-	API = bluraycomapi.BlurayComAPI()
+	API = bluraycomapi.BlurayComAPI(LOCAL_STORAGE_PATH)
 	updateUserPass()
 	openWindow(BluRayCategories,'bluray-com-categories.xml')
 	

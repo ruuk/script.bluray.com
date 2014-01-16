@@ -3,7 +3,7 @@ if sys.version < '2.7.3': #If crappy html.parser, use internal version. Using in
 	print 'Blu-ray.com: Using internal HTMLParser'
 	import HTMLParser # @UnusedImport
 import html5lib # @UnusedImport
-import re, requests, bs4, urllib # @UnresolvedImport
+import re, requests, bs4, urllib, os # @UnresolvedImport
 
 def LOG(msg):
 	print msg
@@ -42,7 +42,7 @@ class LoginError(Exception):
 		self.message = msg
 		
 class ResultItem:
-	_resultType = 'None'
+	_resultType = 'BASE'
 	_hr = '[COLOR FF606060]%s[/COLOR]' % ('_' * 200)
 	headerColor = 'FF0080D0'
 	
@@ -50,6 +50,7 @@ class ResultItem:
 		self.title = ''
 		self.icon = ''
 		self.ID = ''
+		self.internalID = ''
 		
 	def start(self,soupData):
 		self.processSoupData(soupData)
@@ -154,7 +155,7 @@ class ResultItem:
 		return self._ratingRE.sub(r'[COLOR FFCCCCFF]\1[/COLOR]',text)
 	
 class ReviewsResult(ResultItem):
-	_resultType = 'ReviewsResult'
+	_resultType = 'REVIEWS'
 	
 	def __init__(self):
 		self._section = None
@@ -168,6 +169,7 @@ class ReviewsResult(ResultItem):
 		self.previous = None
 		self.next = None
 		self.categoryID = ''
+		self.catIcon = ''
 		self.genreIDs = []
 		self.sortTitle = ''
 		self.runtime = 0
@@ -287,12 +289,14 @@ class DealsResult(ReviewsResult):
 		self.ID = self.url.strip('/').rsplit('/')[-1]
 
 class CollectionResult(ReviewsResult):
+	_resultType = 'COLLECTION'
 	infoTags = ('runtime','studio','year','releasetimestamp')
 	def __init__(self,categoryid):
 		ReviewsResult.__init__(self)
 		self.categoryID = categoryid
 		self.originalURL = ''
 		self.watched = False
+		self.dateWatched = 0
 		self.json = {}
 		
 	'''
@@ -334,6 +338,7 @@ class CollectionResult(ReviewsResult):
 		the = json.get('the')
 		if the: self.title = the + ' ' + self.title
 		self.icon = json.get('coverurl0')
+		self.catIcon = BlurayComAPI.catIcons.get(str(self.categoryID))
 		self.setURL(json.get('url'), self.categoryID)
 		self.sortTitle = json.get('titlesort',self.title)
 		self.genreIDs = json.get('genreids','').split(',')
@@ -368,12 +373,13 @@ class CollectionResult(ReviewsResult):
 				data = time.strftime('%b %d, %Y',time.gmtime(data))
 			infos.append(data)
 		self.info = ' | '.join(infos)
-		try:
-			watched = int(json.get('dtwatched'))
-			self.description = ('%s: ' % TR['watched']) + time.strftime('%b %d, %Y',time.localtime(watched))
-		except (TypeError, ValueError):
-			self.description = json.get('watched') and ('%s: %s' % (TR['watched'], TR['yes'])) or ''
-		self.description += '[CR]' + json.get('comment','')
+		if self.watched:
+			try:
+				self.dateWatched = int(json.get('dtwatched','0'))
+			except (TypeError, ValueError):
+				self.dateWatched = 0
+			
+		self.description += json.get('comment','')
 		self.genre = ''
 		
 	def refresh(self):
@@ -443,7 +449,7 @@ class PriceTrackingResult(ReviewsResult):
 		self.processSoupData(self.json)
 
 class Review(ReviewsResult):
-	_resultType = 'Review'
+	_resultType = 'REVIEW'
 	def __init__(self,url):
 		ReviewsResult.__init__(self)
 		self.flagImage = ''
@@ -578,7 +584,7 @@ class Review(ReviewsResult):
 			self.similarTitles.append((li.find('a').get('href'),li.find('img').get('src'),removeColorTags(li.getText())))
 			
 class SiteReview(Review):
-	_resultType = 'GameReview'
+	_resultType = 'SITEREVIEW'
 	def __init__(self, reviewSoupData, url):
 		Review.__init__(self, url)
 		self.reviewSoupData = reviewSoupData
@@ -852,7 +858,8 @@ class BlurayComAPI:
 	apiLoginURL = 'http://m.blu-ray.com/api/userauth.php'
 	collectionURL = 'http://m.blu-ray.com/api/collection.json.php?categoryid={category}&imgsz=1&session={session_id}'
 	updateCollectableURL = 'http://m.blu-ray.com/api/updatecollectable.php'
-	deleteCollectableURL = 'http://m.blu-ray.com/api/deletefromcollection.php?productid={product_id}&categoryid=21&session={session_id}'
+	deleteCollectableURL = 'http://m.blu-ray.com/api/deletefromcollection.php?productid={product_id}&categoryid={category_id}&session={session_id}'
+	#'http://www.blu-ray.com/community/collection.php?action=quickdelete&u=89978&categoryid=7&productid='
 	countriesURL = 'http://m.blu-ray.com/countries.json.php?_=1387933807086'
 	priceTrackerURL = 'http://www.blu-ray.com/community/pricetracker.php'
 	priceTrackerDeleteURL = 'http://www.blu-ray.com/community/pricetracker.php?action=delete&id={item_id}'
@@ -889,6 +896,20 @@ class BlurayComAPI:
 					(28,'Amazon'),
 					(31,'iTunes')
 				)
+	
+	catIcons = {	'7':'cats/br.png',
+					'21':'cats/dvd.png',
+					'16':'cats/ps3.png',
+					'29':'cats/ps4.png',
+					'23':'cats/360.png',
+					'30':'cats/one.png',
+					'26':'cats/wii.png',
+					'27':'cats/wu.png',
+					'20':'',
+					'24':'cats/uv.png',
+					'28':'cats/aiv.png',
+					'31':'cats/it.png'
+				}
 	
 	sections = (	('bluraymovies','Blu-ray',7),
 					('3d','3D Blu-Ray',0),
@@ -1043,12 +1064,14 @@ class BlurayComAPI:
 	
 	siteEncoding = 'iso-8859-2'
 		
-	def __init__(self):
+	def __init__(self,local_storage_path,auto_refresh_interval=86400):
 		self.parser = None
 		self.sessionID = ''
 		self.user = None
 		self.md5password = None
 		self._session = None
+		self.localStoragePath = local_storage_path
+		self.autoRefreshInterval = auto_refresh_interval
 	
 	def session(self):
 		if self._session: return self._session
@@ -1157,7 +1180,7 @@ class BlurayComAPI:
 		
 	def getReview(self,url,catID):
 		url1 = url
-		if str(catID) == '20': url1 = url + '?show=preview'		
+		if str(catID) == '20': url1 = url + '?show=preview'
 		if '/www.' in url:
 			pool = threadpool.ThreadPool(2)
 			reqs = threadpool.makeRequests(self._getReviewData, [{'idx':0,'url':url1},{'idx':1,'url':url + '?show=userreviews'}])
@@ -1172,9 +1195,24 @@ class BlurayComAPI:
 				soup2 = results[0]['soup']
 			return SiteReview(soup2,url).start(soup)
 		else:
-			return Review(url).start(self._getReviewData(url1))
+			return Review(url).start(self._getReviewData({'url':url1}).get('soup'))
 	
-	def getCollection(self,categories):
+	def getLocalCollection(self,catID,force=False):
+		local = os.path.join(self.localStoragePath,str(catID) + '.json')
+		if not os.path.exists(local): return None
+		with open(local,'r') as f:
+			try:
+				last = int(f.readline().strip('\n'))
+				if time.time() - last > self.autoRefreshInterval and not force: return None
+			except:
+				LOG('ERROR: Failed to get time of last refresh for category ID %s' % catID)
+				return None
+			data = f.read()
+		json = requests.compat.json.loads(data)
+		return json
+		
+		
+	def getCollection(self,categories,force_refresh=False):
 		'''
 		{u'collection_types': [
 			{u'addcollcount': u'1', u'system': u'1', u'id': u'1', u'displayorder': u'100000', u'name': u'Owned'},
@@ -1187,18 +1225,30 @@ class BlurayComAPI:
 		'''
 		if not self.apiLogin(): return
 		items = []
-		for category in categories:
-			req = requests.get(self.collectionURL.format(category=category,session_id=self.sessionID))
-			json = req.json()
-			if not 'collection' in json:
-				if not self.apiLogin(force=True): return []
-				req = requests.get(self.collectionURL.format(category=category,session_id=self.sessionID))
+		idx=0
+		for catID in categories:
+			json = None
+			if not force_refresh: json = self.getLocalCollection(catID)
+			if not json:
+				req = requests.get(self.collectionURL.format(category=catID,session_id=self.sessionID))
 				json = req.json()
-				if not 'collection' in json: return []
-			
+				if not 'collection' in json:
+					#Try one more time - perhaps our login has time out or something
+					if not self.apiLogin(force=True): return []
+					req = requests.get(self.collectionURL.format(category=catID,session_id=self.sessionID))
+					json = req.json()
+					if not 'collection' in json:
+						#Fallback and force local collection if available
+						json = self.getLocalCollection(catID, force=True)
+						if not json or not 'collection' in json: continue
+				else:
+					with open(os.path.join(self.localStoragePath,str(catID) + '.json'),'w') as f: f.write(str(int(time.time())) + '\n' + req.text)
 			
 			for i in json['collection']:
-				items.append(CollectionResult(category).start(i))
+				cr = CollectionResult(catID).start(i)
+				cr.internalID = str(idx)
+				items.append(cr)
+				idx+=1
 				
 		items.sort(key=lambda i: i.sortTitle)
 		return items
@@ -1278,10 +1328,13 @@ class BlurayComAPI:
 		req = requests.post(self.updateCollectableURL,data=data)
 		return not 'error' in req.json()
 		
-	def deleteCollectable(self,product_id):
+	def deleteCollectable(self,product_id,category_id):
 		if not self.apiLogin(): return
-		req = requests.get(self.deleteCollectableURL.format(product_id=product_id,session_id=self.sessionID))
-		return not 'error' in req.json()
+		req = requests.get(self.deleteCollectableURL.format(product_id=product_id,category_id=category_id,session_id=self.sessionID))
+		if 'error' in req.json():
+			LOG('ERROR: %s' % repr(req.json()))
+			return False
+		return True
 	
 	def getPriceTracking(self):
 		if not self.apiLogin(): return
