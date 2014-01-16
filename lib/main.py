@@ -126,6 +126,7 @@ class BluRayReviews(BaseWindowDialog):
 				default = API.categories[default-3][0]
 			else:
 				default = 0 - default
+			self.lastCategory = default
 		if default == 0:
 			cats = []
 			for ID,cat in API.categories:  # @UnusedVariable
@@ -189,8 +190,7 @@ class BluRayReviews(BaseWindowDialog):
 						if e.error == 'userpass': error = 'Bad Blu-ray.com name or password.'
 						xbmcgui.Dialog().ok('Error','Login Error:','',error)
 						return
-				self.lastCategory = category
-				self.currentResults = results
+				if category != None: self.lastCategory = category
 			elif self.mode == 'PRICETRACKER':
 				try:
 					results = API.getPriceTracking()
@@ -199,9 +199,9 @@ class BluRayReviews(BaseWindowDialog):
 					if e.error == 'userpass': error = 'Bad Blu-ray.com name or password.'
 					xbmcgui.Dialog().ok('Error','Login Error:','',error)
 					return
-				self.currentResults = results
 			else:
 				results, paging = API.getReviews(page)
+			self.currentResults = results
 			items = []
 			if paging[0]:
 				item = xbmcgui.ListItem(label=T(32005),iconImage='')
@@ -346,23 +346,26 @@ class BluRayReviews(BaseWindowDialog):
 				
 	def changeCategory(self):
 		m = ChoiceSlideout(T(32028))
-		m.addItem('all',T(32031))
-		m.addItem('movies','Movies')
-		m.addItem('games','Games')
+		m.addItem(0,T(32031))
+		m.addItem(-1,T(32038))
+		m.addItem(-2,T(32039))
 		for cat_id, cat in self.getCollectionCategoriesToShow(): # @UnusedVariable
 			m.addItem(cat_id,cat)
 		m.addSep()
 		m.addItem('refresh','[B]Update Collection[/B]')
+		m.setAutoSelectID(self.lastCategory)
 		ID = m.getResult()
 		if ID is None: return
-		if ID == 'all':
-			self.refresh(category=0)
-		elif ID == 'movies':
-			self.refresh(category=-1)
-		elif ID == 'games':
-			self.refresh(category=-2)
-		elif ID == 'refresh':
-			self.refresh(category=self.lastCategory,force=True)
+		
+		if ID == 'refresh':
+			d = xbmcgui.DialogProgress()
+			d.create('Updating...','Getting collection data...')
+			try:
+				cats = self.getCollectionCategories(0)
+				API.refreshCollection(cats,callback=d.update)
+			finally:
+				d.close()
+			self.refresh(category=self.lastCategory)
 		else:
 			self.refresh(category=ID)
 				
@@ -474,10 +477,7 @@ class BluRayReviews(BaseWindowDialog):
 			self.setFocus(self.reviewList)
 		
 	def getCategoryName(self,catID):
-		catID = str(catID)
-		for ID, name in API.categories:
-			if str(ID) == catID: return name
-		return '?'
+		return API.getCategoryNameByID(catID) or '?'
 		
 	def removeFromCollection(self,result=None):
 		if not result:
@@ -928,6 +928,7 @@ class BluRaySelect(BaseWindowDialog):
 		self.selection = None
 		self.canceled = True
 		self.items = kwargs.get('items')
+		self._autoSelectID =  kwargs.get('auto_select_id')
 		BaseWindowDialog.__init__(self)
 		
 	def onInit(self):
@@ -935,17 +936,30 @@ class BluRaySelect(BaseWindowDialog):
 		self.itemList = self.getControl(100)
 		self.fillItems()
 		self.setFocus(self.itemList)
+		self.autoSelect()
 		
+	def autoSelect(self):
+		if not self._autoSelectID: return
+		for i in self.items:
+			if self._autoSelectID == i['id']:
+				for x in range(0,self.itemList.size()):
+					if self.itemList.getListItem(x).getProperty('_id') == i['_id']:
+						self.itemList.selectItem(x)
+						return
+					
 	def fillItems(self):
-		
 		items = []
+		ct=0
 		for i in self.items:  # @UnusedVariable
 			item = xbmcgui.ListItem(label=i['label'])
-			if not i['id']:
+			if i['id'] == None:
 				item.setProperty('separator','1')
 			else:
 				item.setProperty('icon1',i['icon1'])
 				item.setProperty('icon2',i['icon2'])
+				item.setProperty('_id',str(ct))
+				i['_id'] = str(ct)
+				ct+=1
 			items.append(item)
 		self.itemList.addItems(items)
 				
@@ -995,10 +1009,14 @@ class ImageViewer(BaseWindowDialog):
 class ChoiceList:
 	def __init__(self,caption=''):
 		self.caption = caption
+		self._autoSelectID = None
 		self.items = []
 		
 	def addItem(self,ID,label,icon1='',icon2=''):
 		self.items.append({'id':ID,'label':label,'icon1':icon1,'icon2':icon2})
+		
+	def setAutoSelectID(self,ID):
+		self._autoSelectID = ID
 		
 	def addSep(self):
 		self.items.append({'id':None,'label':' '})
@@ -1012,7 +1030,7 @@ class ChoiceList:
 		
 class ChoiceSlideout(ChoiceList):
 	def getResult(self):
-		w = openWindow(BluRaySelect,'bluray-com-select.xml',return_window=True,items=self.items)
+		w = openWindow(BluRaySelect,'bluray-com-select.xml',return_window=True,items=self.items,auto_select_id=self._autoSelectID)
 		idx = w.selection
 		del w
 		if idx == None: return
@@ -1106,6 +1124,8 @@ def main():
 								'yes':T(32012)
 							})
 	API = bluraycomapi.BlurayComAPI(LOCAL_STORAGE_PATH)
+	API.setDefaultCountryByIndex(getSetting('default_country',0))
+	LOG('Default country: %s' % str(API.defaultCountry).upper())
 	updateUserPass()
 	openWindow(BluRayCategories,'bluray-com-categories.xml')
 	

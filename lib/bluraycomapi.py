@@ -848,6 +848,8 @@ def playIMDBVideo(ID):
 def removeColorTags(text):
 	return re.sub('\[/?COLOR[^\]]*?\]','',text)
 
+def _fakeProgressCallback(pct,msg): pass
+
 class BlurayComAPI:
 	reviewsURL = 'http://m.blu-ray.com/movies/reviews.php'
 	releasesURL = 'http://m.blu-ray.com/movies'
@@ -1072,7 +1074,12 @@ class BlurayComAPI:
 		self._session = None
 		self.localStoragePath = local_storage_path
 		self.autoRefreshInterval = auto_refresh_interval
+		self.defaultCountry = 'all'
 	
+	def setDefaultCountryByIndex(self,idx):
+		self.defaultCountry = self.countries_n[idx]['c']
+		self.session().cookies.set('country', self.defaultCountry)
+		
 	def session(self):
 		if self._session: return self._session
 		self._session = requests.session()
@@ -1099,6 +1106,12 @@ class BlurayComAPI:
 			pass
 		LOG('Using: html.parser parser')
 		return bs4.BeautifulSoup(text, self.parser, from_encoding=self.siteEncoding)
+	
+	def getCategoryNameByID(self,catID):
+		catID = str(catID)
+		for ID, name in self.categories:
+			if str(ID) == catID: return name
+		return None
 	
 	def getCategories(self):
 		cats = [(TR['reviews'],'','reviews'),(TR['releases'],'','releases'),(TR['deals'],'','deals'),(TR['search'],'','search')]
@@ -1210,9 +1223,11 @@ class BlurayComAPI:
 			data = f.read()
 		json = requests.compat.json.loads(data)
 		return json
+	
+	def refreshCollection(self,categories,callback=_fakeProgressCallback):
+		self.getCollection(categories, force_refresh=True,only_refresh=True,callback=callback)
 		
-		
-	def getCollection(self,categories,force_refresh=False):
+	def getCollection(self,categories,force_refresh=False,only_refresh=False,callback=_fakeProgressCallback):
 		'''
 		{u'collection_types': [
 			{u'addcollcount': u'1', u'system': u'1', u'id': u'1', u'displayorder': u'100000', u'name': u'Owned'},
@@ -1226,6 +1241,8 @@ class BlurayComAPI:
 		if not self.apiLogin(): return
 		items = []
 		idx=0
+		catct=0
+		total = len(categories)
 		for catID in categories:
 			json = None
 			if not force_refresh: json = self.getLocalCollection(catID)
@@ -1237,19 +1254,22 @@ class BlurayComAPI:
 					if not self.apiLogin(force=True): return []
 					req = requests.get(self.collectionURL.format(category=catID,session_id=self.sessionID))
 					json = req.json()
-					if not 'collection' in json:
-						#Fallback and force local collection if available
-						json = self.getLocalCollection(catID, force=True)
-						if not json or not 'collection' in json: continue
-				else:
+				if json and 'collection' in json:
 					with open(os.path.join(self.localStoragePath,str(catID) + '.json'),'w') as f: f.write(str(int(time.time())) + '\n' + req.text)
-			
+				else:
+					if only_refresh: continue
+					#Fallback and force local collection if available
+					json = self.getLocalCollection(catID, force=True)
+					if not json or not 'collection' in json: continue
+			catct += 1
+			callback(int((catct/float(total))*100),self.getCategoryNameByID(catID))
+			if only_refresh: continue
 			for i in json['collection']:
 				cr = CollectionResult(catID).start(i)
 				cr.internalID = str(idx)
 				items.append(cr)
 				idx+=1
-				
+		if only_refresh: return	
 		items.sort(key=lambda i: i.sortTitle)
 		return items
 	
