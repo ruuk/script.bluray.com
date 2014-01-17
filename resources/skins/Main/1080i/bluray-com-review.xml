@@ -47,7 +47,7 @@
 			<width>110</width>
 			<height>110</height>
 			<aspectratio align="left">keep</aspectratio>
-			<texture fallback="script-bluray-com-no_cover.png">$INFO[Window.Property(cover)]</texture>
+			<texture fallback="@NOCOVER@">$INFO[Window.Property(cover)]</texture>
 		</control>
 		<control type="label">
 			<posx>150</posx>
@@ -115,7 +115,7 @@
 							<width>170</width>
 							<height>197</height>
 							<aspectratio align="left">keep</aspectratio>
-							<texture fallback="script-bluray-com-no_cover.png">$INFO[ListItem.Property(front)]</texture>
+							<texture fallback="@NOCOVER@">$INFO[ListItem.Property(front)]</texture>
 						</control>
 						<control type="image">
 							<posx>210</posx>
@@ -123,7 +123,7 @@
 							<width>170</width>
 							<height>197</height>
 							<aspectratio align="right">keep</aspectratio>
-							<texture fallback="script-bluray-com-no_cover.png">$INFO[ListItem.Property(back)]</texture>
+							<texture fallback="@NOCOVER@">$INFO[ListItem.Property(back)]</texture>
 						</control>
 					</control>
 					<control type="image">
@@ -162,7 +162,7 @@
 							<width>170</width>
 							<height>197</height>
 							<aspectratio align="left">keep</aspectratio>
-							<texture fallback="script-bluray-com-no_cover.png">$INFO[ListItem.Property(front)]</texture>
+							<texture fallback="@NOCOVER@">$INFO[ListItem.Property(front)]</texture>
 						</control>
 						<control type="image">
 							<posx>210</posx>
@@ -170,7 +170,7 @@
 							<width>170</width>
 							<height>197</height>
 							<aspectratio align="right">keep</aspectratio>
-							<texture fallback="script-bluray-com-no_cover.png">$INFO[ListItem.Property(back)]</texture>
+							<texture fallback="@NOCOVER@">$INFO[ListItem.Property(back)]</texture>
 						</control>
 					</control>
 					<control type="image">
@@ -320,7 +320,7 @@
 								<width>180</width>
 								<height>180</height>
 								<aspectratio align="left">keep</aspectratio>
-								<texture fallback="script-bluray-com-no_cover.png">$INFO[ListItem.Icon]</texture>
+								<texture fallback="@NOCOVER@">$INFO[ListItem.Icon]</texture>
 							</control>
 							<control type="textbox">
 								<posx>210</posx>
@@ -375,7 +375,7 @@
 								<width>180</width>
 								<height>180</height>
 								<aspectratio align="left">keep</aspectratio>
-								<texture fallback="script-bluray-com-no_cover.png">$INFO[ListItem.Icon]</texture>
+								<texture fallback="@NOCOVER@">$INFO[ListItem.Icon]</texture>
 							</control>
 							<control type="textbox">
 								<posx>210</posx>

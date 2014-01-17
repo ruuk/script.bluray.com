@@ -3,6 +3,7 @@ import xbmc, xbmcgui, xbmcaddon
 import bluraycomapi
 
 ADDON = xbmcaddon.Addon()
+__version__ = ADDON.getAddonInfo('version')
 T = ADDON.getLocalizedString
 
 CACHE_PATH = os.path.join(xbmc.translatePath(ADDON.getAddonInfo('profile')),'cache')
@@ -18,6 +19,8 @@ def LOG(msg):
 	print 'Blu-ray.com: %s' % msg
 bluraycomapi.LOG = LOG
 	
+LOG('Version: %s' % __version__)
+
 def imageToCache(src,name):
 	response = requests.get(src, stream=True)
 	target = os.path.join(CACHE_PATH,name)
@@ -530,7 +533,7 @@ class BluRayReviews(BaseWindowDialog):
 				else:
 					result = results[0]
 				if not result: return
-				openWindow(BluRayReview, 'bluray-com-review.xml',url=result.url,cat_id=result.categoryID)
+				openWindow(BluRayReview, 'bluray-com-review.xml',url=result.url,cat_id=result.categoryID,replaces=[('@NOCOVER@',API.getNoCover(str(result.categoryID)))])
 				
 	def onAction(self,action):
 		try:
@@ -551,6 +554,7 @@ class BluRayReview(BaseWindowDialog):
 		self.url = kwargs.get('url')
 		self.categoryID = kwargs.get('cat_id')
 		self.review = None
+		self.nocover = API.getNoCover(str(self.categoryID))
 		
 	def onInit(self):
 		BaseWindowDialog.onInit(self)
@@ -574,6 +578,7 @@ class BluRayReview(BaseWindowDialog):
 		try:
 			review = API.getReview(self.url,self.categoryID)
 			self.review = review
+			
 			self.setProperty('title', review.title)
 			self.setProperty('subheading1', review.subheading1)
 			self.setProperty('subheading2', review.subheading2)
@@ -596,9 +601,9 @@ class BluRayReview(BaseWindowDialog):
 				items.append(item)
 			if review.coverFront or review.coverBack:
 				item = xbmcgui.ListItem()
-				item.setProperty('front',review.coverImage or 'script-bluray-com-no_cover.png')
-				item.setProperty('frontLarge',review.coverFront or 'script-bluray-com-no_cover.png')
-				item.setProperty('back',review.coverBack or 'script-bluray-com-no_cover.png')
+				item.setProperty('front',review.coverImage or self.nocover)
+				item.setProperty('frontLarge',review.coverFront or self.nocover)
+				item.setProperty('back',review.coverBack or self.nocover)
 				items.append(item)
 			ct = 0
 			for source, url in review.historyGraphs:  # @UnusedVariable
@@ -653,7 +658,7 @@ class BluRayReview(BaseWindowDialog):
 			if item.getProperty('video'):
 				bluraycomapi.playIMDBVideo(item.getProperty('id'))
 			else:
-				openWindow(ImageViewer, 'bluray-com-image.xml',url=item.getProperty('1080p'),front=item.getProperty('frontLarge'),back=item.getProperty('back'))
+				openWindow(ImageViewer, 'bluray-com-image.xml',replaces=[('@NOCOVER@',self.nocover)],url=item.getProperty('1080p'),front=item.getProperty('frontLarge'),back=item.getProperty('back'))
 		elif controlID == 134:
 			item = self.altList.getSelectedItem()
 			if not item: return
@@ -1105,7 +1110,16 @@ def openReviewsWindow(mode=None):
 	openWindow(BluRayReviews,'bluray-com-reviews.xml',mode=mode)
 	setGlobalSkinProperty('reviews_open','0')
 		
-def openWindow(window_class,xml_file,return_window=False,**kwargs):
+def openWindow(window_class,xml_file,return_window=False,replaces=None,**kwargs):
+	if replaces:
+		src = os.path.join(xbmc.translatePath(ADDON.getAddonInfo('path')),'resources','skins','Main','1080i',xml_file)
+		xml_file = 'bluray-com-modified.xml'
+		dest = os.path.join(xbmc.translatePath(ADDON.getAddonInfo('path')),'resources','skins','Main','1080i',xml_file)
+		with open(src,'r') as f: xml = f.read()
+		for r,val in replaces:
+			xml = xml.replace(r,val)
+		with open(dest,'w') as f: f.write(xml)
+				
 	w = window_class(xml_file , xbmc.translatePath(ADDON.getAddonInfo('path')), 'Main',**kwargs)
 	w.doModal()
 	if return_window:

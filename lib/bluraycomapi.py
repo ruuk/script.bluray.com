@@ -196,6 +196,7 @@ class ReviewsResult(ResultItem):
 		self.genre = data[-1].text
 		self.url = soupData.find('a').get('href')
 		self.ID = self.url.strip('/').rsplit('/')[-1]
+		self.categoryID = 7
 
 class ReviewsResultJSON(ReviewsResult):
 	def __init__(self,catID):
@@ -269,6 +270,7 @@ class ReleasesResult(ReviewsResult):
 		self.info = data[-1].text
 		self.url = soupData.find('a').get('href')
 		self.ID = self.url.strip('/').rsplit('/')[-1]
+		self.categoryID = 7
 		
 class DealsResult(ReviewsResult):
 	def processSoupData(self,soupData):
@@ -287,6 +289,7 @@ class DealsResult(ReviewsResult):
 			
 		self.url = soupData.find('a').get('href')
 		self.ID = self.url.strip('/').rsplit('/')[-1]
+		self.categoryID = 7
 
 class CollectionResult(ReviewsResult):
 	_resultType = 'COLLECTION'
@@ -913,6 +916,20 @@ class BlurayComAPI:
 					'31':'cats/it.png'
 				}
 	
+	catNoCover = {	'7':'script-bluray-com-bluray_no_cover.png',
+					'21':'script-bluray-com-dvd_no_cover.png',
+					'16':'script-bluray-com-no_cover.png',
+					'29':'script-bluray-com-no_cover.png',
+					'23':'script-bluray-com-no_cover.png',
+					'30':'script-bluray-com-no_cover.png',
+					'26':'script-bluray-com-no_cover.png',
+					'27':'script-bluray-com-no_cover.png',
+					'20':'script-bluray-com-no_cover.png',
+					'24':'script-bluray-com-no_cover.png',
+					'28':'script-bluray-com-no_cover.png',
+					'31':'script-bluray-com-no_cover.png'
+				}
+	
 	sections = (	('bluraymovies','Blu-ray',7),
 					('3d','3D Blu-Ray',0),
 					('dvdmovies','DVD',21),
@@ -1080,6 +1097,10 @@ class BlurayComAPI:
 		self.defaultCountry = self.countries_n[idx]['c']
 		self.session().cookies.set('country', self.defaultCountry)
 		
+	def getNoCover(self,catID):
+		if catID in self.catNoCover: return self.catNoCover[catID]
+		return 'script-bluray-com-no_cover.png'
+	
 	def session(self):
 		if self._session: return self._session
 		self._session = requests.session()

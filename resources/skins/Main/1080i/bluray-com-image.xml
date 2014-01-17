@@ -86,7 +86,7 @@
 				<width>960</width>
 				<height>1080</height>
 				<aspectratio align="left'">keep</aspectratio>
-				<texture fallback="script-bluray-com-no_cover.png">$INFO[Window.Property(front)]</texture>
+				<texture fallback="@NOCOVER@">$INFO[Window.Property(front)]</texture>
 			</control>
 			<control type="image">
 				<posx>960</posx>
@@ -94,7 +94,7 @@
 				<width>960</width>
 				<height>1080</height>
 				<aspectratio align="right'">keep</aspectratio>
-				<texture fallback="script-bluray-com-no_cover.png">$INFO[Window.Property(back)]</texture>
+				<texture fallback="@NOCOVER@">$INFO[Window.Property(back)]</texture>
 			</control>
 		</control>
 	</controls>

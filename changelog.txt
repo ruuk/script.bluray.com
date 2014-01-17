@@ -1,13 +1,15 @@
 Blu-ray.com Changelog
 
-Current Version : 0.0.18
+Current Version : 0.1.0
 
 TODO:
-	Stuff
+	Collection sort orders
+	More collection management options
+	Add to amazon wishlist/cart
 		
 *** 0.1.0 ***
 
-Initial public release
+Initial public beta release
 
 *** 0.0.1 ***
 
