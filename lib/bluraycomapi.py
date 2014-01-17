@@ -1133,13 +1133,16 @@ class BlurayComAPI:
 		items = []
 		soup = self.url2Soup(self.releasesURL)
 		section = ''
+		idx=0
 		for i in soup.findAll('li'): #,{'data-role':lambda x: not x}):
 			if i.h3:
 				res = ReleasesResult().start(i)
 				if section:
 					res._section = section
 					section = ''
+				res.internalID = str(idx)
 				items.append(res)
+				idx+=1
 			elif i.string:
 				heading = i.string.lower()
 				if 'this' in heading:
@@ -1155,8 +1158,12 @@ class BlurayComAPI:
 			page = ''
 		items = []
 		soup = self.url2Soup(self.dealsURL + page)
+		idx=0 
 		for i in soup.findAll('li',{'data-role':lambda x: not x}):
-			items.append(DealsResult().start(i))
+			dr = DealsResult().start(i)
+			dr.internalID = str(idx)
+			items.append(dr)
+			idx+=1
 		return (items,self.getPaging(soup))
 	
 	def getReviews(self,page=''):
@@ -1166,8 +1173,12 @@ class BlurayComAPI:
 			page = ''
 		soup = self.url2Soup(self.reviewsURL + page)
 		items = []
+		idx=0
 		for i in soup.findAll('li',{'data-role':lambda x: not x}):
-			items.append(ReviewsResult().start(i))
+			rr = ReviewsResult().start(i)
+			rr.internalID = str(idx)
+			items.append(rr)
+			idx+=1
 		return (items,self.getPaging(soup))
 	
 	def makeReviewSoup(self,req):
@@ -1284,14 +1295,22 @@ class BlurayComAPI:
 			req = requests.post(url,data={'general_model':terms,'action':'search','c':section,'searchsubmit':'Search'},headers={'Referer':url})
 			results = []
 			soup = self.getSoup(req.text)
+			idx=0
 			for table in soup.find('form',{'id':'compareform'}).findAll('table',recursive=False):
-				results.append(SiteSearchResult(section).start(table))
+				ssr = SiteSearchResult(section).start(table)
+				ssr.internalID = str(idx)
+				results.append(ssr)
+				idx+=1
 		else:
 			url = self.searchURL.format(section=section,country=country.upper(),keyword=urllib.quote(terms),time=str(int(time.time()*1000)))
 			req = requests.get(url)
 			results = []
+			idx=0
 			for i in req.json().get('items',[]):
-				results.append(ReviewsResultJSON(self.getCatIDFromSection(section)).start(i))
+				rrj = ReviewsResultJSON(self.getCatIDFromSection(section)).start(i)
+				rrj.internalID = str(idx)
+				results.append(rrj)
+				idx+=1
 				
 		return results
 		
@@ -1366,8 +1385,12 @@ class BlurayComAPI:
 			req = requests.get(self.myPriceTrackerURL.format(session_id=self.sessionID))
 			json = req.json()
 			if not 'items' in json: return []
+		idx=0
 		for i in json['items']:
-			items.append(PriceTrackingResult().start(i))
+			ptr = PriceTrackingResult().start(i)
+			ptr.internalID = str(idx)
+			items.append(ptr)
+			idx+=1
 				
 		return items
 	
