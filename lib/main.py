@@ -645,11 +645,13 @@ class BluRayReview(BaseWindowDialog):
 			self.setFocusId(200)
 		
 	def doMenu(self):
-		items = [T(32027)]
-		idx = xbmcgui.Dialog().select(T(32028),items)
-		if idx < 0: return
-		if idx == 0:
+		m = ChoiceList(T(32028))
+		m.addItem('trackprice', T(32027))
+		result = m.getResult()
+		if not result: return
+		if result == 'trackprice':
 			trackPrice(API.getTrackingIDWithURL(self.review.url))
+		
 	
 	def onClick(self,controlID):
 		if controlID == 102:

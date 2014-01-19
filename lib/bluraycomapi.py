@@ -1416,6 +1416,7 @@ class BlurayComAPI:
 		return items
 	
 	def getTrackingIDWithURL(self,url):
+		self.siteLogin()
 		url = url.replace('://m.','://www.')
 		soup = self.url2Soup(url)
 		try:
