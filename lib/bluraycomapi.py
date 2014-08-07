@@ -3,7 +3,8 @@ if sys.version < '2.7.3': #If crappy html.parser, use internal version. Using in
 	print 'Blu-ray.com: Using internal HTMLParser'
 	import HTMLParser # @UnusedImport
 import html5lib # @UnusedImport
-import re, requests, bs4, urllib, os # @UnresolvedImport
+import re, bs4, urllib, os # @UnresolvedImport
+import requests2 as requests # @UnresolvedImport
 
 def LOG(msg):
 	print msg

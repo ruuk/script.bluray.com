@@ -7,6 +7,10 @@ TODO:
 	More collection management options
 	Add to amazon wishlist/cart
 
+*** 0.1.2 ***
+
+Changed dependency and import to requests2
+
 *** 0.1.1 ***
 
 Fix for adding price tracking failing when the user is not already logged in
