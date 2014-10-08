@@ -4,7 +4,7 @@ if sys.version < '2.7.3': #If crappy html.parser, use internal version. Using in
 	import HTMLParser # @UnusedImport
 import html5lib # @UnusedImport
 import re, bs4, urllib, os # @UnresolvedImport
-import requests2 as requests # @UnresolvedImport
+import requests
 
 def LOG(msg):
 	print msg

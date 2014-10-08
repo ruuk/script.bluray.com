@@ -1,6 +1,6 @@
 Blu-ray.com Changelog
 
-Current Version : 0.1.1
+Current Version : 0.1.2
 
 TODO:
 	Collection sort orders
@@ -9,7 +9,7 @@ TODO:
 
 *** 0.1.2 ***
 
-Changed dependency and import to requests2
+Change from using requests2-2.2.1 module to requests-2.3.0
 
 *** 0.1.1 ***
 
