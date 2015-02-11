@@ -1,7 +1,5 @@
 Blu-ray.com Changelog
 
-Current Version : 0.1.2
-
 TODO:
 	Collection sort orders
 	More collection management options
