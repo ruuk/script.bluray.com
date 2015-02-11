@@ -184,7 +184,7 @@
 					</control>
 				</focusedlayout>
 			</control>
-		
+
 			<control type="textbox" id="130">
 				<posx>410</posx>
 				<posy>130</posy>
@@ -301,7 +301,7 @@
 								<colordiffuse>FF808080</colordiffuse>
 							</control>
 							<control type="label">
-								<posx>295</posx>
+								<posx>25</posx>
 								<posy>50</posy>
 								<width>550</width>
 								<height>100</height>
@@ -356,7 +356,7 @@
 								<colordiffuse>FF808080</colordiffuse>
 							</control>
 							<control type="label">
-								<posx>295</posx>
+								<posx>25</posx>
 								<posy>50</posy>
 								<width>550</width>
 								<height>100</height>

@@ -7,6 +7,11 @@ TODO:
 	More collection management options
 	Add to amazon wishlist/cart
 
+*** 0.1.3 ***
+
+Fixes skin alignment issues for Kodi
+Fix issue with lack of list price in price tracker
+
 *** 0.1.2 ***
 
 Change from using requests2-2.2.1 module to requests-2.3.0

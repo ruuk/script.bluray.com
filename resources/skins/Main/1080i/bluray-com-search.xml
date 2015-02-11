@@ -73,7 +73,7 @@
 			<disabledcolor>FF555555</disabledcolor>
 			<focusedcolor>FFFFFFFF</focusedcolor>
 		</control>
-		
+
 		<control type="label">
 			<posx>210</posx>
 			<posy>210</posy>
@@ -122,7 +122,7 @@
 				<onleft>102</onleft>
 				<itemlayout height="38">
 					<control type="label">
-						<posx>150</posx>
+						<posx>0</posx>
 						<posy>0</posy>
 						<width>300</width>
 						<height>38</height>
@@ -144,7 +144,7 @@
 						<visible>Control.HasFocus(100)</visible>
 					</control>
 					<control type="label">
-						<posx>150</posx>
+						<posx>0</posx>
 						<posy>0</posy>
 						<width>300</width>
 						<height>38</height>
@@ -156,7 +156,7 @@
 						<visible>Control.HasFocus(100)</visible>
 					</control>
 					<control type="label">
-						<posx>150</posx>
+						<posx>0</posx>
 						<posy>0</posy>
 						<width>300</width>
 						<height>38</height>
@@ -184,7 +184,7 @@
 				<onleft>100</onleft>
 				<itemlayout height="38">
 					<control type="label">
-						<posx>290</posx>
+						<posx>0</posx>
 						<posy>0</posy>
 						<width>580</width>
 						<height>38</height>
@@ -213,7 +213,7 @@
 						<visible>Control.HasFocus(101)</visible>
 					</control>
 					<control type="label">
-						<posx>290</posx>
+						<posx>0</posx>
 						<posy>0</posy>
 						<width>580</width>
 						<height>38</height>
@@ -225,7 +225,7 @@
 						<visible>Control.HasFocus(101)</visible>
 					</control>
 					<control type="label">
-						<posx>290</posx>
+						<posx>0</posx>
 						<posy>0</posy>
 						<width>580</width>
 						<height>38</height>

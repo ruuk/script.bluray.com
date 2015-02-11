@@ -8,7 +8,7 @@ import requests
 
 def LOG(msg):
 	print msg
-	
+
 TR = {	'reviews':'Reviews',
 		'releases':'Releases',
 		'deals':'Deals',
@@ -34,42 +34,42 @@ def getGenreByID(ID):
 	for name, label, gid in BlurayComAPI.genres:  # @UnusedVariable
 		if gid == ID: return label
 	return ''
-	
+
 class LoginError(Exception):
 	def __init__(self,name,msg,code=0):
 		Exception.__init__(self, msg)
 		self.error = name
 		self.code = code
 		self.message = msg
-		
+
 class ResultItem:
 	_resultType = 'BASE'
 	_hr = '[COLOR FF606060]%s[/COLOR]' % ('_' * 200)
 	headerColor = 'FF0080D0'
-	
+
 	def __init__(self):
 		self.title = ''
 		self.icon = ''
 		self.ID = ''
 		self.internalID = ''
-		
+
 	def start(self,soupData):
 		self.processSoupData(soupData)
 		return self
-	
+
 	def __str__(self):
 		return '<%s=%s %s>' % (self._resultType,self.title,self.ID)
-	
+
 	def processSoupData(self,soupData):
 		pass
-	
+
 	def convertTable(self,soup,table,sep=' '):
 		if not table: return
 		text = '[CR]' + self.getTableData(table, sep)
 		tag = soup.new_tag('p')
 		tag.string = text
 		table.replaceWith(tag)
-		
+
 	def getTableData(self,table,sep=' '):
 		if not table: return
 		text = ''
@@ -80,7 +80,7 @@ class ResultItem:
 				if tdtext: tds.append(tdtext)
 			text += sep.join(tds).strip() + '[CR]'
 		return text
-		
+
 	def convertUL(self,soup,ul):
 		text = '[CR]'
 		for li in ul.findAll('li'):
@@ -88,13 +88,13 @@ class ResultItem:
 		tag = soup.new_tag('p')
 		tag.string = text
 		ul.replaceWith(tag)
-		
+
 	def setURL(self,url,catID):
 		self.originalURL = url.replace('//ww.','//www.')
 		self.url = self.originalURL
 		if str(catID) in ('7','21'):
 			self.url = self.originalURL.replace('www','m')
-		
+
 	def convertHeaders(self,soup,tag,h='h3',no_cr=False):
 		for h3 in tag.findAll(h):
 			for i in h3.findAll('img'):
@@ -105,16 +105,16 @@ class ResultItem:
 			else:
 				h3r.string = '[CR][COLOR %s][B]%s[/B][/COLOR][CR]' % (self.headerColor,h3.getText().strip())
 			h3.replaceWith(h3r)
-			
+
 	def convertBR(self,tag):
 		for t in tag.findAll('br'): t.insert_after('[CR]')
-		
+
 	def replaceFlags(self,soup,tag):
 		for img in tag.findAll('img',{'src':lambda x: x and '/flags/' in x}):
 			new = soup.new_tag('span')
 			new.string = '(%s) ' % img.get('src','').rsplit('.',1)[0].rsplit('/',1)[-1]
 			img.replaceWith(new)
-		
+
 	_flagCodeRE = re.compile('/flags/([\w-]+)\.png')
 	def convertFlagImage(self,url):
 		try:
@@ -127,37 +127,37 @@ class ResultItem:
 		except:
 			pass
 		return url
-	
+
 	_excessiveNL = re.compile('(?:\s*\[CR\]\s*){3,}')
 	def cleanWhitespace(self,text):
 		text = text.strip()
 		while text.startswith('[CR]'): text = text[4:].lstrip()
 		while text.endswith('[CR]'): text = text[:-4].rstrip()
-		text = self._excessiveNL.sub('[CR][CR]',text)	
+		text = self._excessiveNL.sub('[CR][CR]',text)
 		return re.sub('\[CR\]\s+','[CR]',text)
-	
+
 	_URLRatingRE = re.compile('/b(\d0?)\.jpg')
 	def extractRatingNumber(self,url):
 		try:
 			return self._URLRatingRE.search(url).group(1)
 		except:
 			return '0'
-	
+
 	_percentRE = re.compile('(?<!\d)(1?\d{1,2}%)')
 	def colorPercents(self,text):
 		return self._percentRE.sub(r'[COLOR FFFFCCCC]\1[/COLOR]',text)
-	
+
 	_priceRE = re.compile('(\$\d*\.\d{2})')
 	def colorPrices(self,text):
 		return self._priceRE.sub(r'[COLOR FFCCFFCC]\1[/COLOR]',text)
-	
+
 	_ratingRE = re.compile('(?<!\d)(1?\d\.\d)(?!\d)')
 	def colorRatings(self,text):
 		return self._ratingRE.sub(r'[COLOR FFCCCCFF]\1[/COLOR]',text)
-	
+
 class ReviewsResult(ResultItem):
 	_resultType = 'REVIEWS'
-	
+
 	def __init__(self):
 		self._section = None
 		self.description = ''
@@ -176,7 +176,7 @@ class ReviewsResult(ResultItem):
 		self.runtime = 0
 		self.watched = False
 		ResultItem.__init__(self)
-		
+
 	def processSoupData(self,soupData):
 		self.title = soupData.find('h3').getText().strip()
 		flagImg = soupData.find('img',{'src':lambda x: '/flag/' in x})
@@ -203,7 +203,7 @@ class ReviewsResultJSON(ReviewsResult):
 	def __init__(self,catID):
 		ReviewsResult.__init__(self)
 		self.categoryID = catID
-		
+
 	def processSoupData(self,json):
 		self.title = json.get('title','')
 		self.ID = json.get('pid','')
@@ -233,13 +233,13 @@ class ReviewsResultJSON(ReviewsResult):
 			except:
 				pass
 		self.info = json.get('year','') + ' | ' + json.get('reldate','')
-		
-		
+
+
 class SiteSearchResult(ReviewsResult):
 	def __init__(self,catID):
 		ReviewsResult.__init__(self)
 		self.categoryID = catID
-		
+
 	def processSoupData(self,soupData):
 		self.title = soupData.find('h3').getText(strip=True)
 		self.icon = soupData.find('img').get('src').replace('_small.','_medium.')
@@ -253,7 +253,7 @@ class SiteSearchResult(ReviewsResult):
 			self.ratingImage = 'rating/script-bluray-com-brating_%s.png' % self.extractRatingNumber(ratingImage.get('src'))
 		flagImg = soupData.find('img',{'src':lambda x: '/flags/' in x})
 		if flagImg: self.flagImage = self.convertFlagImage(flagImg.get('src',''))
-		
+
 class ReleasesResult(ReviewsResult):
 	def processSoupData(self,soupData):
 		self.title = soupData.find('h3').getText().strip()
@@ -272,7 +272,7 @@ class ReleasesResult(ReviewsResult):
 		self.url = soupData.find('a').get('href')
 		self.ID = self.url.strip('/').rsplit('/')[-1]
 		self.categoryID = 7
-		
+
 class DealsResult(ReviewsResult):
 	def processSoupData(self,soupData):
 		self.title = soupData.find('h3').getText().strip()
@@ -284,10 +284,10 @@ class DealsResult(ReviewsResult):
 			self.description = '%s (%s)  [COLOR FF%s]%s[/COLOR]' % (price[1][0],price[2][0],price[0][1],price[0][0].upper())
 		else:
 			for p in price: self.description =+ p[0] + '  '
-		
+
 		images = soupData.findAll('img')
 		self.icon = images[0].get('src')
-			
+
 		self.url = soupData.find('a').get('href')
 		self.ID = self.url.strip('/').rsplit('/')[-1]
 		self.categoryID = 7
@@ -302,7 +302,7 @@ class CollectionResult(ReviewsResult):
 		self.watched = False
 		self.dateWatched = 0
 		self.json = {}
-		
+
 	'''
 	rating: 8.6842
 	dtadded: 1387809844
@@ -382,13 +382,13 @@ class CollectionResult(ReviewsResult):
 				self.dateWatched = int(json.get('dtwatched','0'))
 			except (TypeError, ValueError):
 				self.dateWatched = 0
-			
+
 		self.description += json.get('comment','')
 		self.genre = ''
-		
+
 	def refresh(self):
 		self.processSoupData(self.json)
-	
+
 class PriceTrackingResult(ReviewsResult):
 	def __init__(self):
 		ReviewsResult.__init__(self)
@@ -398,17 +398,17 @@ class PriceTrackingResult(ReviewsResult):
 		self.expireUnix = 0
 		self.categoryID = ''
 		self.countryCode = ''
-		
+
 		self.priceMatched = False
 		self.currency = '$'
 		self.retailer = ''
-		
+
 		self.price = ''
 		self.myPrice = ''
 		self.priceRange = ''
 		self.listPrice = ''
 		self.originalURL = ''
-			
+
 	def processSoupData(self,json):
 		self.json = json
 		self.ID = json.get('pid','')
@@ -437,8 +437,8 @@ class PriceTrackingResult(ReviewsResult):
 		try:
 			self.listPrice = int(json.get('listprice',''))/100.0
 		except:
-			self.listPrice
-		
+			self.listPrice = 0
+		print json
 		myprice = '%s%.2f' % (self.currency,self.myPrice)
 		price = '%s%.2f' % (self.currency,self.price)
 		listprice = '%s%.2f' % (self.currency,self.listPrice)
@@ -448,7 +448,7 @@ class PriceTrackingResult(ReviewsResult):
 			self.expireUnix = int(json.get('expiretimestamp'))
 		except:
 			pass
-		
+
 	def refresh(self):
 		self.processSoupData(self.json)
 
@@ -476,38 +476,38 @@ class Review(ReviewsResult):
 		self.imdbVideos = []
 		self.url = url
 		self.ID = self.url.strip('/').rsplit('/')[-1]
-		
+
 	def processSoupData(self,soupData):
 		flagImg = soupData.find('img',{'src':lambda x: 'flags' in x})
 		if flagImg: self.flagImage = self.convertFlagImage(flagImg.get('src',''))
-		
+
 		self.owned = bool(soupData.find('a',{'href':lambda x: '/collection.php' in x}))
-		
+
 		self.getImages(soupData)
-			
+
 		self.title = soupData.find('title').getText(strip=True)
-		
+
 		subheadings = soupData.findAll('span',{'class':'subheading'})
 		if subheadings:
 			self.subheading1 = subheadings[0].getText().strip()
 			if len(subheadings) > 1: self.subheading2 = subheadings[1].getText().strip()
-		
+
 		coverImg = soupData.find('img',{'id':'frontimage_overlay'})
 		if coverImg:
 			self.coverImage = coverImg.get('src','')
 			self.coverFront = self.coverImage.replace('_medium','_front')
 			self.coverBack = self.coverImage.replace('_medium','_back')
-		
+
 		for p in soupData.findAll('p'):
 			p.replaceWith(p.getText() + '[CR]')
 		reviewSoup = soupData.find('div',{'id':'reviewItemContent'})
-		
+
 		if reviewSoup:
 			self.convertHeaders(soupData, reviewSoup)
 			self.convertBR(reviewSoup)
 			self.convertTable(soupData, reviewSoup.find('table'))
 			self.review = self.colorRatings(self.cleanWhitespace(reviewSoup.getText()))
-			
+
 		price_rating = soupData.findAll('div',{'class':'content2'})
 		self.convertHeaders(soupData, price_rating[0])
 		self.convertBR(price_rating[0])
@@ -516,7 +516,7 @@ class Review(ReviewsResult):
 			self.convertHeaders(soupData, price_rating[1])
 			self.convertTable(soupData, price_rating[1].find('table'),': ')
 			self.blurayRating = self.colorRatings(self.cleanWhitespace(price_rating[1].getText()))
-			
+
 		sections = soupData.findAll('div',{'data-role':'collapsible'})
 		for section in sections:
 			h3 = section.find('h3')
@@ -534,10 +534,10 @@ class Review(ReviewsResult):
 			elif 'review' in sectionName and not self.review:
 				self.convertHeaders(soupData, section)
 				self.review = section.getText()
-				
+
 		if self.review.startswith('[CR]'): self.review = self.review[4:]
 		if self.overview.startswith('[CR]'): self.overview = self.overview[4:]
-			
+
 	def getImages(self,soupData):
 		img = soupData.find('img',{'id':'reviewScreenShot'})
 		if not img: return
@@ -547,52 +547,52 @@ class Review(ReviewsResult):
 			count = int(re.search('<td id="menu_screenshots_num"[^>]*?><small>\((\d+)\)</small>',test).group(1)) + 1
 		except:
 			count = 11
-			
+
 		for i in range(1,count):
 			src = base % i
 			p1080 = src.replace('.jpg','_1080p.jpg')
 			self.images.append((src,p1080))
-		
+
 		for i in soupData.findAll('img',{'id':'reviewScreenShot'}):
 			src = i.get('src','')
 			idx = src.rsplit('.',1)[0].split('_',1)[-1]
 			tag = soupData.new_tag('span')
 			tag.string = '[CR][COLOR FFA00000]IMAGE %s[/COLOR][CR]' % idx
 			i.insert_before(tag)
-			
+
 	def processOverview(self,soupData,section):
 		self.convertHeaders(soupData, section)
 		self.convertTable(soupData, section.find('table'),sep=': ')
 		self.overview = self.colorPercents(self.cleanWhitespace(section.getText()))
-		
+
 	def processSpecifications(self,soupData,section):
 		self.convertHeaders(soupData, section)
 		self.convertUL(soupData,section.find('ul'))
 		self.specifications = self.cleanWhitespace(section.getText())
-		
+
 	def processHistoryGraphs(self,soupData,section):
 		for i in section.findAll('img'):
 			source = i.previous_sibling
 			source = source and ('[COLOR ' + source.string.rsplit('[COLOR ',1)[-1]) or '?'
 			source = re.sub('\[[^\]]+?\]','',source)
 			self.historyGraphs.append((source,i.get('src','')))
-		
+
 	def processOtherEditions(self,soupData,section):
 		self.convertHeaders(soupData, section)
 		for li in section.findAll('li'):
 			self.otherEditions.append((li.find('a').get('href'),li.find('img').get('src'),removeColorTags(li.getText())))
-			
+
 	def processSimilarTitles(self,soupData,section):
 		self.convertHeaders(soupData, section)
 		for li in section.findAll('li'):
 			self.similarTitles.append((li.find('a').get('href'),li.find('img').get('src'),removeColorTags(li.getText())))
-			
+
 class SiteReview(Review):
 	_resultType = 'SITEREVIEW'
 	def __init__(self, reviewSoupData, url):
 		Review.__init__(self, url)
 		self.reviewSoupData = reviewSoupData
-		
+
 	def processSoupData(self,soupData):
 		try:
 			self.imdb = soupData.find('a',{'href':lambda x: x and 'www.imdb.com/title/' in x}).get('href','')
@@ -603,28 +603,28 @@ class SiteReview(Review):
 			pool = threadpool.ThreadPool(1)
 			reqs = threadpool.makeRequests(getIMDBVideoIDs, [self.imdb])
 			[pool.putRequest(req) for req in reqs]
-		
-		self.owned = bool(soupData.find('a',{'href':lambda x: x and ('/collection.php' in x) and ('action=showcategory' in x)}))		
+
+		self.owned = bool(soupData.find('a',{'href':lambda x: x and ('/collection.php' in x) and ('action=showcategory' in x)}))
 		self.title = soupData.find('title').getText(strip=True)
-		
+
 		flagImg = soupData.find('img',{'src':lambda x: 'flags' in x})
 		if flagImg: self.flagImage = self.convertFlagImage(flagImg.get('src',''))
-		
+
 		subheading = soupData.find('span',{'class':'subheading'})
 		if subheading: self.subheading1 = subheading.getText().strip()
-		
+
 		coverImg = soupData.find('img',{'id':'productimage','src': lambda x: not '.gif' in x})
 		if not coverImg: coverImg = soupData.find('meta',{'property':lambda x: x and ('image' in x)})
 		if not coverImg: coverImg = soupData.find('meta',{'itemprop':lambda x: x and ('image' in x)})
-		
+
 		if coverImg:
 			self.coverImage = coverImg.get('src',coverImg.get('content',''))
 # 			self.coverFront = self.coverImage.replace('_medium','_large')
 # 			self.coverBack = self.coverFront.replace('1_large', '2_large')
-			
+
 		for p in soupData.findAll('p'):
 			p.replaceWith(p.getText() + '[CR]')
-		
+
 		specH3 = soupData.find('h3',text='Specifications')
 		if specH3:
 			for sibling in specH3.next_siblings:
@@ -641,7 +641,7 @@ class SiteReview(Review):
 				self.specifications = ('[COLOR %s][B]Specifications[/B][/COLOR][CR][CR]' % self.headerColor) + self.cleanWhitespace(td.getText())
 			except:
 				pass
-		
+
 		if not self.specifications:
 			table = soupData.find('span',{'class':'subheading'}).find_next_sibling('table')
 			if table:
@@ -675,7 +675,7 @@ class SiteReview(Review):
 								elif c.name == 'td' and c.previous_sibling and c.previous_sibling.name == 'td' and not c.previous_sibling.find('br'):
 									text += ': '
 								last = c.name
-								
+
 				self.specifications = self.cleanWhitespace(text)
 		self.specifications = self.colorPercents(self.specifications)
 
@@ -712,8 +712,8 @@ class SiteReview(Review):
 					else:
 						t = c.getText(strip=True)
 						if t: text += t + ' '
-					
-						
+
+
 				self.price = ('[COLOR %s][B]Price[/B][/COLOR][CR][CR]' % self.headerColor) + self.cleanWhitespace(text)
 			except:
 				pass
@@ -723,14 +723,14 @@ class SiteReview(Review):
 				self.historyGraphs.append((img,img))
 		except:
 			pass
-		
+
 		rating = soupData.find('div',{'id':'ratingscore'}) or ''
 		if rating:
 			if rating.string == '0':
 				rating = ''
 			else:
 				rating = 'Rating: %s[CR][CR]' % rating.string
-				
+
 		start = soupData.find('a',{'href':lambda x: x and '&reviewerid=' in x})
 		if start:
 			review = start.parent.getText()
@@ -751,7 +751,7 @@ class SiteReview(Review):
 					review += sib.string
 			self.review = rating + self.cleanWhitespace(review.replace(u'\xbb','')) + '[CR][CR]'
 		self.getReviews()
-		
+
 		images = soupData.findAll('img',{'src':lambda x: '_mini.jpg' in x})
 		if images:
 			for i in images:
@@ -760,19 +760,19 @@ class SiteReview(Review):
 					self.images.append((src.replace('_mini.','_medium.'),src.replace('_mini.','_original.')))
 		else:
 			self.images.append((self.coverImage,self.coverImage.replace('_medium.','_front.')))
-			
+
 		for i in soupData.findAll('img',{'width':'80','src':lambda x: x and not x.endswith('.gif')}):
-			self.similarTitles.append((i.parent.get('href',''),i.get('src',''),i.get('title')))		
+			self.similarTitles.append((i.parent.get('href',''),i.get('src',''),i.get('title')))
 
 		for i in soupData.findAll('img',{'width':'180','src':lambda x:x and x.endswith('_tn.jpg')}):
 			src = i.get('src','')
 			self.images.append((src.replace('_tn.','.'),src.replace('_tn.','_1080p.')))
-			
+
 		if pool:
 			results = pool.wait(return_results=True)
 			pool.dismissWorkers()
 			self.imdbVideos = results[0]
-			
+
 	def getReviews(self):
 		reviewH3 = self.reviewSoupData.find('h3',text='Post a review')
 		if reviewH3:
@@ -804,7 +804,7 @@ class SiteReview(Review):
 				pass
 		self.review = self.colorRatings(self.review)
 		del self.reviewSoupData
-		
+
 	def getUserReview(self,table):
 		self.convertHeaders(self.reviewSoupData, table, 'h5',no_cr=True)
 		self.convertBR(table)
@@ -847,7 +847,7 @@ def playIMDBVideo(ID):
 		xbmc.Player().play(flvURL, listitem)
 	except:
 		LOG('ERROR: playIMDBVideo()')
-	
+
 
 def removeColorTags(text):
 	return re.sub('\[/?COLOR[^\]]*?\]','',text)
@@ -874,7 +874,7 @@ class BlurayComAPI:
 	coverURL = 'http://images.static-bluray.com/movies/covers/{procuct_id}_front.jpg'
 	coverBackURL = 'http://images.static-bluray.com/movies/covers/{procuct_id}_back.jpg'
 	pageARG = 'page=%s'
-	
+
 	addToCollectionURL = 'http://m.blu-ray.com/api/addtocollection.php'
 	'''
 	session:       c8bc1cdaf86f4bf848d8f8dc51e15c22
@@ -883,12 +883,12 @@ class BlurayComAPI:
 	typeid:        1
 	dateadded:     1388102245
 	watched:       1
-	description:   
+	description:
 	price:         0
-	pricecomment:  
+	pricecomment:
 	dvc:           5
 	'''
-	
+
 	categories = (	(7,'Blu-ray'),
 					(21,'DVD'),
 					(16,'PS3'),
@@ -902,7 +902,7 @@ class BlurayComAPI:
 					(28,'Amazon'),
 					(31,'iTunes')
 				)
-	
+
 	catIcons = {	'7':'cats/br.png',
 					'21':'cats/dvd.png',
 					'16':'cats/ps3.png',
@@ -916,7 +916,7 @@ class BlurayComAPI:
 					'28':'cats/aiv.png',
 					'31':'cats/it.png'
 				}
-	
+
 	catNoCover = {	'7':'script-bluray-com-bluray_no_cover.png',
 					'21':'script-bluray-com-dvd_no_cover.png',
 					'16':'script-bluray-com-no_cover.png',
@@ -930,7 +930,7 @@ class BlurayComAPI:
 					'28':'script-bluray-com-no_cover.png',
 					'31':'script-bluray-com-no_cover.png'
 				}
-	
+
 	sections = (	('bluraymovies','Blu-ray',7),
 					('3d','3D Blu-Ray',0),
 					('dvdmovies','DVD',21),
@@ -945,22 +945,22 @@ class BlurayComAPI:
 					('30','XBox One',30),
 					('27','Wii U',27)
 			)
-	
+
 	coverURLs = {	'16':'http://images.static-bluray.com/products/16/{id}_1_medium.jpg',
 					'28':'http://images.static-bluray.com/movies/aivcovers/{id}_{size}.jpg',
 					'31':'http://images.static-bluray.com/movies/itunescovers/{id}_{size}.jpg',
 					'24':'http://images.static-bluray.com/movies/uvcovers/{id}_{size}.jpg'
 				}
-			
+
 	pageURLs = {	'20':'http://www.blu-ray.com/X/{id}/',
 					'28':'http://www.blu-ray.com/aiv/X-AIV/{id}/',
 					'31':'http://www.blu-ray.com/itunes/X-iTunes/{id}/',
 					'24':'http://www.blu-ray.com/uv/{urlname}-UltraViolet/{id}/'
 				}
-	
+
 	siteSearchURL = 'http://www.blu-ray.com/{platform}/search.php'
 	siteSearchPlatforms = {	'29':'ps4', '23':'xbox360', '30':'xboxone', '26':'wii', '27':'wiiu','16':'ps3'}
-	
+
 	countries = [	{"c":"all","n":"All countries","u":"flags/ALL.png"},
 					{"c":"us","n":"United States","u":"flags/US.png"},
 					{"c":"uk","n":"United Kingdom","u":"flags/GB.png"},
@@ -998,7 +998,7 @@ class BlurayComAPI:
 					{"c":"tr","n":"Turkey","u":"flags/TR.png"},
 					{"c":"ua","n":"Ukraine","u":"flags/UA.png"}
 				]
-	
+
 	countries_n = [	{"c":"all","n":"All countries","u":"http://images.static-bluray.com/flags/global-transparent.png"},
 					{"c":"us","n":"United States","u":"http://images3.static-bluray.com/flags/US.png"},
 					{"c":"uk","n":"United Kingdom","u":"http://images3.static-bluray.com/flags/UK.png"},
@@ -1036,7 +1036,7 @@ class BlurayComAPI:
 					{"c":"tr","n":"Turkey","u":"http://images3.static-bluray.com/flags/TR.png"},
 					{"c":"ua","n":"Ukraine","u":"http://images.static-bluray.com/flags/UA.png"}
 				]
-	
+
 	genres = [	('all', u'-',''),
 				('action', u'Action', '1'),
 				('adventure', u'Adventure', '2'),
@@ -1081,9 +1081,9 @@ class BlurayComAPI:
 				('war', u'War', '26'),
 				('western', u'Western', '27')
 			]
-	
+
 	siteEncoding = 'iso-8859-2'
-		
+
 	def __init__(self,local_storage_path,auto_refresh_interval=86400):
 		self.parser = None
 		self.sessionID = ''
@@ -1093,26 +1093,26 @@ class BlurayComAPI:
 		self.localStoragePath = local_storage_path
 		self.autoRefreshInterval = auto_refresh_interval
 		self.defaultCountry = 'all'
-	
+
 	def setDefaultCountryByIndex(self,idx):
 		self.defaultCountry = self.countries_n[idx]['c']
 		self.session().cookies.set('country', self.defaultCountry)
-		
+
 	def getNoCover(self,catID):
 		if catID in self.catNoCover: return self.catNoCover[catID]
 		return 'script-bluray-com-no_cover.png'
-	
+
 	def session(self):
 		if self._session: return self._session
 		self._session = requests.session()
 		self.siteLogin()
 		return self._session
-	
+
 	def url2Soup(self,url):
 		req = self.session().get(url)
 		req.encoding = self.siteEncoding
 		return self.getSoup(req.text)
-	
+
 	def getSoup(self,text):
 		try:
 			soup = bs4.BeautifulSoup(text, 'lxml', from_encoding=self.siteEncoding)
@@ -1128,20 +1128,20 @@ class BlurayComAPI:
 			pass
 		LOG('Using: html.parser parser')
 		return bs4.BeautifulSoup(text, self.parser, from_encoding=self.siteEncoding)
-	
+
 	def getCategoryNameByID(self,catID):
 		catID = str(catID)
 		for ID, name in self.categories:
 			if str(ID) == catID: return name
 		return None
-	
+
 	def getCategories(self):
 		cats = [(TR['reviews'],'','reviews'),(TR['releases'],'','releases'),(TR['deals'],'','deals'),(TR['search'],'','search')]
 		if self.canLogin():
 			cats.append((TR['collection'],'','collection'))
 			cats.append((TR['pricetracker'],'','pricetracker'))
 		return cats
-	
+
 	def getPaging(self,soupData):
 		prevPage = None
 		nextPage = None
@@ -1150,7 +1150,7 @@ class BlurayComAPI:
 		if next_: nextPage = next_.get('href','').rsplit('=',1)[-1] or None
 		if prev: prevPage = prev.get('href','').rsplit('=',1)[-1] or None
 		return (prevPage,nextPage)
-		
+
 	def getReleases(self):
 		items = []
 		soup = self.url2Soup(self.releasesURL)
@@ -1172,7 +1172,7 @@ class BlurayComAPI:
 				elif 'next' in heading:
 					section = 'NEXTWEEK'
 		return items
-	
+
 	def getDeals(self,page=''):
 		if page:
 			page = '?' + self.pageARG % page
@@ -1180,14 +1180,14 @@ class BlurayComAPI:
 			page = ''
 		items = []
 		soup = self.url2Soup(self.dealsURL + page)
-		idx=0 
+		idx=0
 		for i in soup.findAll('li',{'data-role':lambda x: not x}):
 			dr = DealsResult().start(i)
 			dr.internalID = str(idx)
 			items.append(dr)
 			idx+=1
 		return (items,self.getPaging(soup))
-	
+
 	def getReviews(self,page=''):
 		if page:
 			page = '?' + self.pageARG % page
@@ -1202,13 +1202,13 @@ class BlurayComAPI:
 			items.append(rr)
 			idx+=1
 		return (items,self.getPaging(soup))
-	
+
 	def makeReviewSoup(self,req):
 		fixed = ''
 		for line in req.text.splitlines():
 			if not line.strip(): continue
 			new = line.rstrip()
-			#if new != line: 
+			#if new != line:
 			new += ' '
 			line = new.lstrip()
 			if line != new: line = ' ' + line
@@ -1218,12 +1218,12 @@ class BlurayComAPI:
 		fixed = re.sub('</i>(?i)',' [/I]',fixed)
 		#fixed = re.sub('<br[^>]*?>(?i)','[CR]',fixed)
 		return bs4.BeautifulSoup(fixed,self.parser,from_encoding=self.siteEncoding)
-	
+
 	def _getReviewData(self,data):
 		req = self.session().get(data['url'])
 		data['soup'] = self.makeReviewSoup(req)
 		return data
-		
+
 	def getReview(self,url,catID):
 		url1 = url
 		if str(catID) == '20': url1 = url + '?show=preview'
@@ -1242,7 +1242,7 @@ class BlurayComAPI:
 			return SiteReview(soup2,url).start(soup)
 		else:
 			return Review(url).start(self._getReviewData({'url':url1}).get('soup'))
-	
+
 	def getLocalCollection(self,catID,force=False):
 		local = os.path.join(self.localStoragePath,str(catID) + '.json')
 		if not os.path.exists(local): return None
@@ -1256,10 +1256,10 @@ class BlurayComAPI:
 			data = f.read()
 		json = requests.compat.json.loads(data)
 		return json
-	
+
 	def refreshCollection(self,categories,callback=_fakeProgressCallback):
 		self.getCollection(categories, force_refresh=True,only_refresh=True,callback=callback)
-		
+
 	def getCollection(self,categories,force_refresh=False,only_refresh=False,callback=_fakeProgressCallback):
 		'''
 		{u'collection_types': [
@@ -1302,15 +1302,15 @@ class BlurayComAPI:
 				cr.internalID = str(idx)
 				items.append(cr)
 				idx+=1
-		if only_refresh: return	
+		if only_refresh: return
 		items.sort(key=lambda i: i.sortTitle)
 		return items
-	
+
 	def getCatIDFromSection(self,section):
 		for s,label,catID in self.sections:  # @UnusedVariable
 			if s == section:
 				return catID
-			
+
 	def search(self,terms,section='bluraymovies',country='all'):
 		if section.isdigit():
 			url = self.siteSearchURL.format(platform=self.siteSearchPlatforms.get(str(section)))
@@ -1333,9 +1333,9 @@ class BlurayComAPI:
 				rrj.internalID = str(idx)
 				results.append(rrj)
 				idx+=1
-				
+
 		return results
-		
+
 	def updateCollectable(self,newdata):
 		if not self.apiLogin(): return
 		data = {	'session':       self.sessionID,
@@ -1360,19 +1360,19 @@ class BlurayComAPI:
 		u'title': u'City Slickers',
 		u'releasetimestamp': u'989294400',
 		u'dtadded': u'1387824662',
-		u'pid': u'10866', 
-		u'watched': u'1', 
-		u'studioid': u'61', 
-		u'gpid': u'49947', 
-		u'gtin': u'00027616860958', 
-		u'coverurl0': u'http://images.static-bluray.com/movies/dvdcovers/10866_medium.jpg', 
-		u'year': u'1991', 
-		u'url': u'http://www.blu-ray.com/dvd/City-Slickers-DVD/10866/', 
-		u'studio': u'Columbia Pictures', 
-		u'ctid': u'16809', 
-		u'titlesort': u'City Slickers', 
+		u'pid': u'10866',
+		u'watched': u'1',
+		u'studioid': u'61',
+		u'gpid': u'49947',
+		u'gtin': u'00027616860958',
+		u'coverurl0': u'http://images.static-bluray.com/movies/dvdcovers/10866_medium.jpg',
+		u'year': u'1991',
+		u'url': u'http://www.blu-ray.com/dvd/City-Slickers-DVD/10866/',
+		u'studio': u'Columbia Pictures',
+		u'ctid': u'16809',
+		u'titlesort': u'City Slickers',
 		u'casingid': u'2424'}
-		
+
 		session:       1db9d4f6fba0d41ef26ebfe1f0401a49
 		productid:     10866
 		categoryid:    21
@@ -1380,15 +1380,15 @@ class BlurayComAPI:
 		dateadded:     1387824662
 		datewatched:   0
 		watched:       1
-		description:   
+		description:
 		price:         0
-		pricecomment:  
+		pricecomment:
 		exclude:       0
 
 		'''
 		req = requests.post(self.updateCollectableURL,data=data)
 		return not 'error' in req.json()
-		
+
 	def deleteCollectable(self,product_id,category_id):
 		if not self.apiLogin(): return
 		req = requests.get(self.deleteCollectableURL.format(product_id=product_id,category_id=category_id,session_id=self.sessionID))
@@ -1396,7 +1396,7 @@ class BlurayComAPI:
 			LOG('ERROR: %s' % repr(req.json()))
 			return False
 		return True
-	
+
 	def getPriceTracking(self):
 		if not self.apiLogin(): return
 		items = []
@@ -1413,9 +1413,9 @@ class BlurayComAPI:
 			ptr.internalID = str(idx)
 			items.append(ptr)
 			idx+=1
-				
+
 		return items
-	
+
 	def getTrackingIDWithURL(self,url):
 		self.siteLogin()
 		url = url.replace('://m.','://www.')
@@ -1424,7 +1424,7 @@ class BlurayComAPI:
 			return soup.find('a',{'href':lambda x: 'pricetracker.php' in x and 'action=add' in x}).get('href').split('=')[-1]
 		except:
 			return ''
-			
+
 	def trackPrice(self,product_id,price,price_range=0,expiration=8,update_id=None):
 		'''
 		<input type="text" name="price_1" size="5" />
@@ -1465,19 +1465,19 @@ class BlurayComAPI:
 		headers = {'Referer': referer}
 		req = self.session().post(self.priceTrackerURL,data=data,headers=headers)
 		return req.ok
-	
+
 	def unTrackPrice(self,item_id):
 		if not self.siteLogin(): return False
 		referer = 'http://www.blu-ray.com/community/pricetracker.php'
 		headers = {'Referer': referer}
 		req = self.session().get(self.priceTrackerDeleteURL.format(item_id=item_id),headers=headers)
 		return req.ok
-		
+
 	def siteLogin(self,force=False):
 		'''
 		vb_login_username:         username
-		vb_login_password:         
-		s:                         
+		vb_login_password:
+		s:
 		do:                        login
 		vb_login_md5password:      56b1fb1e8a1561514d1a17ae6ce0e4f9
 		vb_login_md5password_utf:  56b1fb1e8a1561514d1a17ae6ce0e4f9
@@ -1492,10 +1492,10 @@ class BlurayComAPI:
 													'vb_login_md5password_utf':self.md5password
 												})
 		return self.siteLoggedOn()
-		
+
 	def siteLoggedOn(self):
 		return 'bbsessionhash' in self.session().cookies
-	
+
 	def apiLogin(self,force=False):
 		if not force and self.apiLoggedOn(): return True
 		if not self.canLogin(): return False
@@ -1512,11 +1512,11 @@ class BlurayComAPI:
 			else:
 				raise LoginError('unknown','Unknown',code=-1)
 		return self.apiLoggedOn()
-		
+
 	def apiLoggedOn(self):
 		return bool(self.sessionID)
-	
+
 	def canLogin(self):
 		return self.user and self.md5password
-	
-		
+
+
