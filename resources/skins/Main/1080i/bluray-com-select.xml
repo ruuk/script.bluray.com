@@ -30,14 +30,14 @@
 				<scrolltime>200</scrolltime>
 				<itemlayout height="38">
 					<control type="label">
-						<posx>210</posx>
+						<posx>0</posx>
 						<posy>0</posy>
 						<width>420</width>
 						<height>38</height>
 						<font>font13</font>
 						<aligny>center</aligny>
 						<textcolor>FF808080</textcolor>
-						<align>center</align>
+						<align>right</align>
 						<label>$INFO[ListItem.Label]</label>
 					</control>
 				</itemlayout>
@@ -52,26 +52,26 @@
 						<visible>Control.HasFocus(100)</visible>
 					</control>
 					<control type="label">
-						<posx>210</posx>
+						<posx>0</posx>
 						<posy>0</posy>
 						<width>420</width>
 						<height>38</height>
 						<font>font13</font>
 						<aligny>center</aligny>
 						<textcolor>FFFFFFFF</textcolor>
-						<align>center</align>
+						<align>right</align>
 						<label>$INFO[ListItem.Label]</label>
 						<visible>Control.HasFocus(100)</visible>
 					</control>
 					<control type="label">
-						<posx>210</posx>
+						<posx>0</posx>
 						<posy>0</posy>
 						<width>420</width>
 						<height>38</height>
 						<font>font13</font>
 						<aligny>center</aligny>
 						<textcolor>FF3090FF</textcolor>
-						<align>center</align>
+						<align>right</align>
 						<label>$INFO[ListItem.Label]</label>
 						<visible>!Control.HasFocus(100)</visible>
 					</control>
