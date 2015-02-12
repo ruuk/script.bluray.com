@@ -438,7 +438,6 @@ class PriceTrackingResult(ReviewsResult):
 			self.listPrice = int(json.get('listprice',''))/100.0
 		except:
 			self.listPrice = 0
-		print json
 		myprice = '%s%.2f' % (self.currency,self.myPrice)
 		price = '%s%.2f' % (self.currency,self.price)
 		listprice = '%s%.2f' % (self.currency,self.listPrice)

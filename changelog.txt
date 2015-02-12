@@ -5,6 +5,11 @@ TODO:
 	More collection management options
 	Add to amazon wishlist/cart
 
+*** 0.1.5 ***
+
+Fix alignment on categories
+Fix alignment of filter dialog
+
 *** 0.1.4 ***
 
 Fix alignment on selction dialog (ex format selection in collections)
