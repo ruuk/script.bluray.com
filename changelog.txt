@@ -5,6 +5,10 @@ TODO:
 	More collection management options
 	Add to amazon wishlist/cart
 
+*** 0.1.6 ***
+
+Add ability to export a directory that is importable into the Kodi library
+
 *** 0.1.5 ***
 
 Fix alignment on categories
