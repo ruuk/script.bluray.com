@@ -567,13 +567,18 @@ class BluRayReviews(BaseWindowDialog):
         <streamdetails>
         </streamdetails>
     </fileinfo>
+    {tags}
 </movie>'''
+
+        tag = '<tag>{0}</tag>'
 
         path = os.path.join(LOCAL_STORAGE_PATH,'export')
         video = os.path.join(xbmc.translatePath(ADDON.getAddonInfo('path')).decode('utf-8'),'resources','video.mp4')
         if not os.path.exists(path): os.makedirs(path)
         for r in self.currentResults:
             cleanTitle = cleanFilename(r.title)
+            tags = tag.format('offline')
+            if r.is3D: tags += tag.format('3D')
             with open(os.path.join(path,u'{0}.strm'.format(cleanTitle)),'w') as f:
                 f.write(video)
             with open(os.path.join(path,u'{0}.nfo'.format(cleanTitle)),'w') as f:
@@ -586,7 +591,8 @@ class BluRayReviews(BaseWindowDialog):
                         runtime=r.runtime,
                         thumb=r.icon.replace('_medium.','_front.'),
                         watched=r.watched and '0' or '',
-                        genre=r.genre
+                        genre=r.genre,
+                        tags=tags
                     )
                 )
         xbmcgui.Dialog().ok('Done','','Export Complete!')

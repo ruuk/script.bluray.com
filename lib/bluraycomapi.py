@@ -346,6 +346,7 @@ class CollectionResult(ReviewsResult):
         self.setURL(json.get('url'), self.categoryID)
         self.sortTitle = json.get('titlesort',self.title)
         self.genreIDs = json.get('genreids','').split(',')
+        self.is3D = json.get('3d',0)
         try:
             self.runtime = int(json.get('runtime','0'))
         except:
