@@ -587,7 +587,9 @@ class BluRayReviews(BaseWindowDialog):
         sep = u'/'
         if '\\' in path: sep = u'\\'
         video = os.path.join(xbmc.translatePath(ADDON.getAddonInfo('path')).decode('utf-8'),'resources','video.mp4')
-        baseTags = tag.format('offline') + tag.format('blu-ray.com')
+        baseTags = tag.format('blu-ray.com')
+        if getSetting('export_offline_tag',True):
+            baseTags += tag.format('offline')
 
         genreTable = {}
         for g in API.genres: genreTable[g[2]] = g[1]
@@ -601,49 +603,58 @@ class BluRayReviews(BaseWindowDialog):
                 progress.update(int((idx/total)*100),r.title)
                 cleanTitle = cleanFilename(r.title)
 
-                tags = baseTags
-                if r.is3D: tags += tag.format('3D')
-
-                genres = ''
-                for i in r.genreIDs:
-                    if i in genreTable:
-                        genres += genre.format(genreTable[i])
-
+                #Write .strm file
                 f = xbmcvfs.File(path+sep+u'{0}.strm'.format(cleanTitle),'w')
                 f.write(video.encode('utf-8'))
                 f.close()
-                f = xbmcvfs.File(path+sep+u'{0}.nfo'.format(cleanTitle),'w')
-                f.write(
-                    nfo.format(
-                        title=r.title,
-                        sort=r.sortTitle or r.title,
-                        rating=r.rating.split(' ',1)[-1],
-                        #plot=r.description or r.info,
-                        path=video,
-                        runtime=r.runtime,
-                        thumb=r.icon.replace('_medium.','_front.'),
-                        watched=r.watched and '0' or '',
-                        genres=genres,
-                        tags=tags
-                    ).encode('utf-8')
-                )
-                f.close
 
-            response = xbmc.executeJSONRPC('{"jsonrpc": "2.0", "method": "VideoLibrary.GetMovies", "params": {"properties":["tag"]}, "id": 1}')
-            try:
-                data = json.loads(response)
-            except:
-                ERROR()
-            progress.update(100,'Tagging online movies...')
-            for i in data['result']['movies']:
-                tags = i['tag']
-                if not 'offline' in tags and not 'online' in tags:
-                    tags.append('online')
-                    xbmc.executeJSONRPC('{"jsonrpc": "2.0", "method": "VideoLibrary.SetMovieDetails", "params":{"movieid":%s,"tag":%s},"id": 1}' % (i['movieid'],json.dumps(tags)))
+                #Write .nfo file
+                if getSetting('export_write_nfo',True):
+                    tags = baseTags
+                    if r.is3D: tags += tag.format('3D')
+
+                    genres = ''
+                    for i in r.genreIDs:
+                        if i in genreTable:
+                            genres += genre.format(genreTable[i])
+
+                    f = xbmcvfs.File(path+sep+u'{0}.nfo'.format(cleanTitle),'w')
+                    f.write(
+                        nfo.format(
+                            title=r.title,
+                            sort=r.sortTitle or r.title,
+                            rating=r.rating.split(' ',1)[-1],
+                            #plot=r.description or r.info,
+                            path=video,
+                            runtime=r.runtime,
+                            thumb=r.icon.replace('_medium.','_front.'),
+                            watched=r.watched and '0' or '',
+                            genres=genres,
+                            tags=tags
+                        ).encode('utf-8')
+                    )
+                    f.close
+
+            #Tag existing movies online
+            if getSetting('export_offline_tag',True) and getSetting('export_online_tag',True):
+                progress.update(100,'Tagging online movies...')
+                response = xbmc.executeJSONRPC('{"jsonrpc": "2.0", "method": "VideoLibrary.GetMovies", "params": {"properties":["tag"]}, "id": 1}')
+                try:
+                    data = json.loads(response)
+                    if 'result' in data and 'movies' in data['result']:
+                        for i in data['result']['movies']:
+                            tags = i['tag']
+                            if not 'offline' in tags and not 'online' in tags:
+                                tags.append('online')
+                                xbmc.executeJSONRPC('{"jsonrpc": "2.0", "method": "VideoLibrary.SetMovieDetails", "params":{"movieid":%s,"tag":%s},"id": 1}' % (i['movieid'],json.dumps(tags)))
+                except:
+                    ERROR()
         finally:
             progress.close()
 
-        response = xbmc.executeJSONRPC('{"jsonrpc": "2.0", "method": "VideoLibrary.Scan", "params": {"directory":"%s"}, "id": 1}' % path)
+        #Trigger library scan of export path
+        if getSetting('export_trigger_scan',True):
+            xbmc.executeJSONRPC('{"jsonrpc": "2.0", "method": "VideoLibrary.Scan", "params": {"directory":"%s"}, "id": 1}' % path)
 
         xbmcgui.Dialog().ok('Done','','Export of {0} items complete!'.format(int(total)))
 
@@ -1214,6 +1225,28 @@ def getPassword():
     import hashlib
     ADDON.setSetting('pass',hashlib.md5(password).hexdigest())
 
+def removeExported():
+    progress = xbmcgui.DialogProgress()
+    progress.create('Removing...')
+    try:
+        response = xbmc.executeJSONRPC('{"jsonrpc": "2.0", "method": "VideoLibrary.GetMovies", "params": {"properties":["tag"]}, "id": 1}')
+        try:
+            data = json.loads(response)
+            total = len(data['result']['movies'])
+            ftotal = float(total)
+            for idx,i in enumerate(data['result']['movies']):
+                if progress.iscanceled(): break
+                progress.update(int((idx/ftotal)*100),i['label'])
+                tags = i['tag']
+                if 'blu-ray.com' in tags:
+                    xbmc.executeJSONRPC('{"jsonrpc": "2.0", "method": "VideoLibrary.RemoveMovie", "params":{"movieid":%s},"id": 1}' % i['movieid'])
+        except:
+            total = 0
+            ERROR()
+    finally:
+        progress.close()
+    xbmcgui.Dialog().ok('Done','','Removied {0} items from the database.'.format(total))
+
 def setGlobalSkinProperty(key,value=''):
     xbmcgui.Window(10000).setProperty('script.bluray.com-%s' % key,value)
 
@@ -1258,5 +1291,7 @@ def main():
 if __name__ == '__main__':
     if sys.argv[-1] == 'get_password':
         getPassword()
+    elif sys.argv[-1] == 'export_remove_all':
+        removeExported()
     else:
         main()
