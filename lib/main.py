@@ -592,51 +592,60 @@ class BluRayReviews(BaseWindowDialog):
         genreTable = {}
         for g in API.genres: genreTable[g[2]] = g[1]
 
-        for r in self.currentResults:
-            cleanTitle = cleanFilename(r.title)
+        total = float(len(self.currentResults))
+        progress = xbmcgui.DialogProgress()
+        progress.create('Exporting...')
 
-            tags = baseTags
-            if r.is3D: tags += tag.format('3D')
-
-            genres = ''
-            for i in r.genreIDs:
-                if i in genreTable:
-                    genres += genre.format(genreTable[i])
-
-            f = xbmcvfs.File(path+sep+u'{0}.strm'.format(cleanTitle),'w')
-            f.write(video.encode('utf-8'))
-            f.close()
-            f = xbmcvfs.File(path+sep+u'{0}.nfo'.format(cleanTitle),'w')
-            f.write(
-                nfo.format(
-                    title=r.title,
-                    sort=r.sortTitle or r.title,
-                    rating=r.rating.split(' ',1)[-1],
-                    #plot=r.description or r.info,
-                    path=video,
-                    runtime=r.runtime,
-                    thumb=r.icon.replace('_medium.','_front.'),
-                    watched=r.watched and '0' or '',
-                    genres=genres,
-                    tags=tags
-                ).encode('utf-8')
-            )
-            f.close
-
-        response = xbmc.executeJSONRPC('{"jsonrpc": "2.0", "method": "VideoLibrary.GetMovies", "params": {"properties":["tag"]}, "id": 1}')
         try:
-            data = json.loads(response)
-        except:
-            ERROR()
-        for i in data['result']['movies']:
-            tags = i['tag']
-            if not 'offline' in tags and not 'online' in tags:
-                tags.append('online')
-                xbmc.executeJSONRPC('{"jsonrpc": "2.0", "method": "VideoLibrary.SetMovieDetails", "params":{"movieid":%s,"tag":%s},"id": 1}' % (i['movieid'],json.dumps(tags)))
+            for idx,r in enumerate(self.currentResults):
+                progress.update(int((idx/total)*100),r.title)
+                cleanTitle = cleanFilename(r.title)
+
+                tags = baseTags
+                if r.is3D: tags += tag.format('3D')
+
+                genres = ''
+                for i in r.genreIDs:
+                    if i in genreTable:
+                        genres += genre.format(genreTable[i])
+
+                f = xbmcvfs.File(path+sep+u'{0}.strm'.format(cleanTitle),'w')
+                f.write(video.encode('utf-8'))
+                f.close()
+                f = xbmcvfs.File(path+sep+u'{0}.nfo'.format(cleanTitle),'w')
+                f.write(
+                    nfo.format(
+                        title=r.title,
+                        sort=r.sortTitle or r.title,
+                        rating=r.rating.split(' ',1)[-1],
+                        #plot=r.description or r.info,
+                        path=video,
+                        runtime=r.runtime,
+                        thumb=r.icon.replace('_medium.','_front.'),
+                        watched=r.watched and '0' or '',
+                        genres=genres,
+                        tags=tags
+                    ).encode('utf-8')
+                )
+                f.close
+
+            response = xbmc.executeJSONRPC('{"jsonrpc": "2.0", "method": "VideoLibrary.GetMovies", "params": {"properties":["tag"]}, "id": 1}')
+            try:
+                data = json.loads(response)
+            except:
+                ERROR()
+            progress.update(100,'Tagging online movies...')
+            for i in data['result']['movies']:
+                tags = i['tag']
+                if not 'offline' in tags and not 'online' in tags:
+                    tags.append('online')
+                    xbmc.executeJSONRPC('{"jsonrpc": "2.0", "method": "VideoLibrary.SetMovieDetails", "params":{"movieid":%s,"tag":%s},"id": 1}' % (i['movieid'],json.dumps(tags)))
+        finally:
+            progress.close()
 
         response = xbmc.executeJSONRPC('{"jsonrpc": "2.0", "method": "VideoLibrary.Scan", "params": {"directory":"%s"}, "id": 1}' % path)
 
-        xbmcgui.Dialog().ok('Done','','Export of {0} items complete!'.format(len(self.currentResults)))
+        xbmcgui.Dialog().ok('Done','','Export of {0} items complete!'.format(int(total)))
 
 def cleanFilename(filename):
     import string
