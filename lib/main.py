@@ -1233,19 +1233,21 @@ def removeExported():
         try:
             data = json.loads(response)
             total = len(data['result']['movies'])
-            ftotal = float(total)
+            total = float(total)
+            removed = 0
             for idx,i in enumerate(data['result']['movies']):
                 if progress.iscanceled(): break
-                progress.update(int((idx/ftotal)*100),i['label'])
+                progress.update(int((idx/total)*100),i['label'])
                 tags = i['tag']
                 if 'blu-ray.com' in tags:
+                    removed+=1
                     xbmc.executeJSONRPC('{"jsonrpc": "2.0", "method": "VideoLibrary.RemoveMovie", "params":{"movieid":%s},"id": 1}' % i['movieid'])
         except:
             total = 0
             ERROR()
     finally:
         progress.close()
-    xbmcgui.Dialog().ok('Done','','Removied {0} items from the database.'.format(total))
+    xbmcgui.Dialog().ok('Done','','Removied {0} items from the database.'.format(removed))
 
 def setGlobalSkinProperty(key,value=''):
     xbmcgui.Window(10000).setProperty('script.bluray.com-%s' % key,value)
