@@ -1,5 +1,5 @@
-import os, sys, shutil, requests, time
-import xbmc, xbmcgui, xbmcaddon
+import os, sys, shutil, requests, time, json
+import xbmc, xbmcgui, xbmcaddon, xbmcvfs
 import bluraycomapi
 
 ADDON = xbmcaddon.Addon()
@@ -17,9 +17,15 @@ LAST_SEARCH = ''
 
 def LOG(msg):
     print 'Blu-ray.com: %s' % msg
+
+def ERROR():
+    import traceback
+    traceback.print_exc()
+
 bluraycomapi.LOG = LOG
 
 LOG('Version: %s' % __version__)
+
 
 def imageToCache(src,name):
     response = requests.get(src, stream=True)
@@ -560,42 +566,77 @@ class BluRayReviews(BaseWindowDialog):
     <runtime>{runtime}</runtime>
     <thumb>{thumb}</thumb>
     <playcount>{watched}</playcount>
-    <filenameandpath>plugin://plugin.video.youtube/play/?video_id=TAW1B9YNz5s</filenameandpath>
-    <genre>{genre}</genre>
+    <filenameandpath>{path}</filenameandpath>
     <credits></credits>
     <fileinfo>
         <streamdetails>
         </streamdetails>
     </fileinfo>
+    {genres}
     {tags}
 </movie>'''
 
         tag = '<tag>{0}</tag>'
+        genre = '<genre>{0}</genre>'
 
-        path = os.path.join(LOCAL_STORAGE_PATH,'export')
+        path = getSetting('export_path')
+        if not path or not xbmcvfs.exists(path):
+            path = xbmcgui.Dialog().browse(3,'Choose export path','files')
+            if not path: return
+            ADDON.setSetting('export_path',path)
+        sep = u'/'
+        if '\\' in path: sep = u'\\'
         video = os.path.join(xbmc.translatePath(ADDON.getAddonInfo('path')).decode('utf-8'),'resources','video.mp4')
-        if not os.path.exists(path): os.makedirs(path)
+        baseTags = tag.format('offline') + tag.format('blu-ray.com')
+
+        genreTable = {}
+        for g in API.genres: genreTable[g[2]] = g[1]
+
         for r in self.currentResults:
             cleanTitle = cleanFilename(r.title)
-            tags = tag.format('offline')
+
+            tags = baseTags
             if r.is3D: tags += tag.format('3D')
-            with open(os.path.join(path,u'{0}.strm'.format(cleanTitle)),'w') as f:
-                f.write(video)
-            with open(os.path.join(path,u'{0}.nfo'.format(cleanTitle)),'w') as f:
-                f.write(
-                    nfo.format(
-                        title=r.title,
-                        sort=r.sortTitle or r.title,
-                        rating=r.rating.split(' ',1)[-1],
-                        #plot=r.description or r.info,
-                        runtime=r.runtime,
-                        thumb=r.icon.replace('_medium.','_front.'),
-                        watched=r.watched and '0' or '',
-                        genre=r.genre,
-                        tags=tags
-                    )
-                )
-        xbmcgui.Dialog().ok('Done','','Export Complete!')
+
+            genres = ''
+            for i in r.genreIDs:
+                if i in genreTable:
+                    genres += genre.format(genreTable[i])
+
+            f = xbmcvfs.File(path+sep+u'{0}.strm'.format(cleanTitle),'w')
+            f.write(video.encode('utf-8'))
+            f.close()
+            f = xbmcvfs.File(path+sep+u'{0}.nfo'.format(cleanTitle),'w')
+            f.write(
+                nfo.format(
+                    title=r.title,
+                    sort=r.sortTitle or r.title,
+                    rating=r.rating.split(' ',1)[-1],
+                    #plot=r.description or r.info,
+                    path=video,
+                    runtime=r.runtime,
+                    thumb=r.icon.replace('_medium.','_front.'),
+                    watched=r.watched and '0' or '',
+                    genres=genres,
+                    tags=tags
+                ).encode('utf-8')
+            )
+            f.close
+
+        response = xbmc.executeJSONRPC('{"jsonrpc": "2.0", "method": "VideoLibrary.GetMovies", "params": {"properties":["tag"]}, "id": 1}')
+        try:
+            data = json.loads(response)
+        except:
+            ERROR()
+        for i in data['result']['movies']:
+            tags = i['tag']
+            if not 'offline' in tags and not 'online' in tags:
+                tags.append('online')
+                xbmc.executeJSONRPC('{"jsonrpc": "2.0", "method": "VideoLibrary.SetMovieDetails", "params":{"movieid":%s,"tag":%s},"id": 1}' % (i['movieid'],json.dumps(tags)))
+
+        response = xbmc.executeJSONRPC('{"jsonrpc": "2.0", "method": "VideoLibrary.Scan", "params": {"directory":"%s"}, "id": 1}' % path)
+
+        xbmcgui.Dialog().ok('Done','','Export of {0} items complete!'.format(len(self.currentResults)))
 
 def cleanFilename(filename):
     import string

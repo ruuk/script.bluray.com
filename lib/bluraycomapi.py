@@ -889,7 +889,7 @@ class BlurayComAPI:
     dvc:           5
     '''
 
-    categories = (    (7,'Blu-ray'),
+    categories = (  (7,'Blu-ray'),
                     (21,'DVD'),
                     (16,'PS3'),
                     (29,'PS4'),
@@ -917,7 +917,7 @@ class BlurayComAPI:
                     '31':'cats/it.png'
                 }
 
-    catNoCover = {    '7':'script-bluray-com-bluray_no_cover.png',
+    catNoCover = {  '7':'script-bluray-com-bluray_no_cover.png',
                     '21':'script-bluray-com-dvd_no_cover.png',
                     '16':'script-bluray-com-no_cover.png',
                     '29':'script-bluray-com-no_cover.png',
@@ -946,7 +946,7 @@ class BlurayComAPI:
                     ('27','Wii U',27)
             )
 
-    coverURLs = {    '16':'http://images.static-bluray.com/products/16/{id}_1_medium.jpg',
+    coverURLs = {   '16':'http://images.static-bluray.com/products/16/{id}_1_medium.jpg',
                     '28':'http://images.static-bluray.com/movies/aivcovers/{id}_{size}.jpg',
                     '31':'http://images.static-bluray.com/movies/itunescovers/{id}_{size}.jpg',
                     '24':'http://images.static-bluray.com/movies/uvcovers/{id}_{size}.jpg'
@@ -961,7 +961,7 @@ class BlurayComAPI:
     siteSearchURL = 'http://www.blu-ray.com/{platform}/search.php'
     siteSearchPlatforms = {    '29':'ps4', '23':'xbox360', '30':'xboxone', '26':'wii', '27':'wiiu','16':'ps3'}
 
-    countries = [    {"c":"all","n":"All countries","u":"flags/ALL.png"},
+    countries = [   {"c":"all","n":"All countries","u":"flags/ALL.png"},
                     {"c":"us","n":"United States","u":"flags/US.png"},
                     {"c":"uk","n":"United Kingdom","u":"flags/GB.png"},
                     {"c":"ca","n":"Canada","u":"flags/CA.png"},
@@ -999,7 +999,7 @@ class BlurayComAPI:
                     {"c":"ua","n":"Ukraine","u":"flags/UA.png"}
                 ]
 
-    countries_n = [    {"c":"all","n":"All countries","u":"http://images.static-bluray.com/flags/global-transparent.png"},
+    countries_n = [ {"c":"all","n":"All countries","u":"http://images.static-bluray.com/flags/global-transparent.png"},
                     {"c":"us","n":"United States","u":"http://images3.static-bluray.com/flags/US.png"},
                     {"c":"uk","n":"United Kingdom","u":"http://images3.static-bluray.com/flags/UK.png"},
                     {"c":"ca","n":"Canada","u":"http://images3.static-bluray.com/flags/CA.png"},
@@ -1037,7 +1037,7 @@ class BlurayComAPI:
                     {"c":"ua","n":"Ukraine","u":"http://images.static-bluray.com/flags/UA.png"}
                 ]
 
-    genres = [    ('all', u'-',''),
+    genres = [  ('all', u'-',''),
                 ('action', u'Action', '1'),
                 ('adventure', u'Adventure', '2'),
                 ('animation', u'Animation', '3'),
