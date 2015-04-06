@@ -35,6 +35,17 @@ def imageToCache(src,name):
     del response
     return target
 
+def tryTwice(func,*args,**kwargs):
+    try:
+        return func(*args,**kwargs)
+    except:
+        ERROR()
+    xbmc.sleep(500)
+    try:
+        return func(*args,**kwargs)
+    except:
+        ERROR()
+
 class BaseWindowDialog(xbmcgui.WindowXMLDialog):
     def __init__(self):
         self.loading = None
@@ -536,7 +547,7 @@ class BluRayReviews(BaseWindowDialog):
                 results = self.getCurrentItemResult()
                 if not results: return
                 if len(results) > 1:
-                    m = FormatDialog('Format')
+                    m = FormatDialog(T(32055))
                     for r in results:
                         m.addItem(r, self.getCategoryName(r.categoryID), r.icon, r.catIcon)
                     result = m.getResult()
@@ -559,29 +570,39 @@ class BluRayReviews(BaseWindowDialog):
             BaseWindowDialog.onAction(self,action)
 
     def export(self):
-        nfo = '''<movie>
+        nfo = u'''<movie>
     <title>{title}</title>
     <sorttitle>{sort}</sorttitle>
     <rating>{rating}</rating>
     <runtime>{runtime}</runtime>
+    <year>{year}</year>
     <thumb>{thumb}</thumb>
+    <fanart>{fanart}</fanart>
     <playcount>{watched}</playcount>
     <filenameandpath>{path}</filenameandpath>
     <credits></credits>
+    <art>
+        <fanart>{fanart}</fanart>
+        <poster>{thumb}</poster>
+    </art>
     <fileinfo>
         <streamdetails>
         </streamdetails>
     </fileinfo>
+    {collection}
     {genres}
+{actors}
     {tags}
 </movie>'''
 
-        tag = '<tag>{0}</tag>'
-        genre = '<genre>{0}</genre>'
+        tag = u'<tag>{0}</tag>'
+        genre = u'<genre>{0}</genre>'
+        actor = u'    <actor><name>{name}</name><role>{role}</role><thumb>{thumb}</thumb></actor>\n'
+        set_ = u'<set>{0}</set>'
 
         path = getSetting('export_path')
         if not path or not xbmcvfs.exists(path):
-            path = xbmcgui.Dialog().browse(3,'Choose export path','files')
+            path = xbmcgui.Dialog().browse(3,T(32054),'files')
             if not path: return
             ADDON.setSetting('export_path',path)
         sep = u'/'
@@ -596,11 +617,23 @@ class BluRayReviews(BaseWindowDialog):
 
         total = float(len(self.currentResults))
         progress = xbmcgui.DialogProgress()
-        progress.create('Exporting...')
+        progress.create(T(32051))
 
+        import tmdbsimple as tmdb
+        tmdb.API_KEY = '99ccac3e0d7fd2c7a076beea141c1057'
+        config = tmdb.Configuration()
+        config.info()
+        tmdbBaseImageURL = config.images['base_url'] + u'original{0}'
         try:
             for idx,r in enumerate(self.currentResults):
-                progress.update(int((idx/total)*100),r.title)
+                progress.update(int((idx/total)*100),r.title,' ',' ')
+                if progress.iscanceled(): return
+
+                searchTitle = r.title.replace('3D','').strip()
+                if r.uniqueMovies:
+                    searchTitle = searchTitle.split('/')[0].strip()
+
+
                 cleanTitle = cleanFilename(r.title)
 
                 #Write .strm file
@@ -618,6 +651,26 @@ class BluRayReviews(BaseWindowDialog):
                         if i in genreTable:
                             genres += genre.format(genreTable[i])
 
+                    fanart = ''
+                    actors = ''
+                    collection = ''
+
+                    if getSetting('export_get_tmdb',True):
+                        progress.update(int((idx/total)*100),r.title,u'TMDB: {0}...'.format(searchTitle))
+                        search = tmdb.Search()
+                        tryTwice(search.movie,query=searchTitle,year=r.year)
+                        if search.results:
+                            movie = tmdb.Movies(search.results[0]['id'])
+                            tryTwice(movie.info,append_to_response='credits')
+                            fanart = movie.backdrop_path and tmdbBaseImageURL.format(movie.backdrop_path) or ''
+                            if movie.belongs_to_collection:
+                                collection = set_.format(movie.belongs_to_collection['name'])
+                                if r.uniqueMovies:
+                                    bd = movie.belongs_to_collection['backdrop_path']
+                                    fanart = bd and tmdbBaseImageURL.format(bd) or fanart
+                            for c in movie.credits.get('cast',[]):
+                                actors += actor.format(name=c['name'],role=c['character'],thumb=tmdbBaseImageURL.format(c['profile_path']))
+
                     f = xbmcvfs.File(path+sep+u'{0}.nfo'.format(cleanTitle),'w')
                     f.write(
                         nfo.format(
@@ -627,17 +680,33 @@ class BluRayReviews(BaseWindowDialog):
                             #plot=r.description or r.info,
                             path=video,
                             runtime=r.runtime,
+                            year=r.year,
                             thumb=r.icon.replace('_medium.','_front.'),
+                            fanart=fanart,
                             watched=r.watched and '0' or '',
+                            collection=collection,
                             genres=genres,
+                            actors=actors,
                             tags=tags
                         ).encode('utf-8')
                     )
-                    f.close
+                    f.close()
+
+                fanartOutPath = path+sep+u'{0}-fanart.jpg'.format(cleanTitle)
+                if getSetting('export_get_fanart',True) and fanart and not xbmcvfs.exists(fanartOutPath):
+                    progress.update(int((idx/total)*100),r.title,u'TMDB: {0}'.format(searchTitle),u'Getting fanart...')
+                    f = xbmcvfs.File(fanartOutPath,'w')
+                    try:
+                        r = requests.get(fanart, stream=True)
+                        if r.status_code == 200:
+                            for chunk in r.iter_content(1024):
+                                f.write(chunk)
+                    finally:
+                        f.close()
 
             #Tag existing movies online
             if getSetting('export_offline_tag',True) and getSetting('export_online_tag',True):
-                progress.update(100,'Tagging online movies...')
+                progress.update(100,T(32052))
                 response = xbmc.executeJSONRPC('{"jsonrpc": "2.0", "method": "VideoLibrary.GetMovies", "params": {"properties":["tag"]}, "id": 1}')
                 try:
                     data = json.loads(response)
@@ -656,7 +725,7 @@ class BluRayReviews(BaseWindowDialog):
         if getSetting('export_trigger_scan',True):
             xbmc.executeJSONRPC('{"jsonrpc": "2.0", "method": "VideoLibrary.Scan", "params": {"directory":"%s"}, "id": 1}' % path)
 
-        xbmcgui.Dialog().ok('Done','','Export of {0} items complete!'.format(int(total)))
+        xbmcgui.Dialog().ok(T(32048),'',T(32053).format(int(total)))
 
 def cleanFilename(filename):
     import string
@@ -1183,7 +1252,7 @@ def trackPrice(product_id,update_id=None,price='19.99'):
         LOG('trackPrice(): No product ID')
         return
     while price != None:
-        price = doKeyboard('Enter Price',str(price))
+        price = doKeyboard(T(32050),str(price))
         try:
             float(price)
             if not '.' in price: raise Exception()
@@ -1227,9 +1296,9 @@ def getPassword():
 
 def removeExported():
     progress = xbmcgui.DialogProgress()
-    progress.create('Removing...')
+    progress.create(T(32047))
     try:
-        response = xbmc.executeJSONRPC('{"jsonrpc": "2.0", "method": "VideoLibrary.GetMovies", "params": {"properties":["tag"]}, "id": 1}')
+        response = xbmc.executeJSONRPC('{"jsonrpc": "2.0", "method": "VideoLibrary.GetMovies", "params": {"properties":["tag","file"]}, "id": 1}')
         try:
             data = json.loads(response)
             total = len(data['result']['movies'])
@@ -1239,7 +1308,7 @@ def removeExported():
                 if progress.iscanceled(): break
                 progress.update(int((idx/total)*100),i['label'])
                 tags = i['tag']
-                if 'blu-ray.com' in tags:
+                if 'blu-ray.com' in tags or 'script.bluray.com' in i['file']:
                     removed+=1
                     xbmc.executeJSONRPC('{"jsonrpc": "2.0", "method": "VideoLibrary.RemoveMovie", "params":{"movieid":%s},"id": 1}' % i['movieid'])
         except:
@@ -1247,7 +1316,7 @@ def removeExported():
             ERROR()
     finally:
         progress.close()
-    xbmcgui.Dialog().ok('Done','','Removied {0} items from the database.'.format(removed))
+    xbmcgui.Dialog().ok(T(32048),'',T(32049).format(removed))
 
 def setGlobalSkinProperty(key,value=''):
     xbmcgui.Window(10000).setProperty('script.bluray.com-%s' % key,value)

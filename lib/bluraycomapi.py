@@ -3,7 +3,7 @@ if sys.version < '2.7.3': #If crappy html.parser, use internal version. Using in
     print 'Blu-ray.com: Using internal HTMLParser'
     import HTMLParser # @UnusedImport
 import html5lib # @UnusedImport
-import re, bs4, urllib, os # @UnresolvedImport
+import re, bs4, urllib, os, datetime # @UnresolvedImport
 import requests
 
 def LOG(msg):
@@ -347,6 +347,12 @@ class CollectionResult(ReviewsResult):
         self.sortTitle = json.get('titlesort',self.title)
         self.genreIDs = json.get('genreids','').split(',')
         self.is3D = json.get('3d',0)
+        self.uniqueMovies = json.get('uniquemovies')
+        try:
+            self.year = str(json.get('year') or datetime.datetime.fromtimestamp(json.get('releasetimestamp')).year)
+        except:
+            self.year = ''
+
         try:
             self.runtime = int(json.get('runtime','0'))
         except:

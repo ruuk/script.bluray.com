@@ -50,12 +50,14 @@
 		<setting id="used_cat_28" type="bool" label="Amazon" default="true" />
 		<setting id="used_cat_31" type="bool" label="iTunes" default="true" />
 	</category>
-    <category label="Export">
-        <setting id="export_path" type="folder" option="writeable" label="Path" default="" />
-        <setting id="export_offline_tag" type="bool" label="Add 'offline' tag" default="true" />
-        <setting id="export_online_tag" type="bool" subsetting="true" label="Add 'online' tag to existing movies" default="true" enable="eq(-1,true)"/>
-		<setting id="export_write_nfo" type="bool" label="Create .nfo file" default="true" />
-		<setting id="export_trigger_scan" type="bool" label="Trigger scan when finished" default="true" />
-        <setting label="Remove movies exported by this addon from database" type="action" id="export_remove_all" action="RunScript(script.bluray.com,export_remove_all)"/>
+    <category label="32040">
+        <setting id="export_path" type="folder" option="writeable" label="32041" default="" />
+        <setting id="export_offline_tag" type="bool" label="32042" default="true" />
+        <setting id="export_online_tag" type="bool" subsetting="true" label="32043" default="true" enable="eq(-1,true)"/>
+		<setting id="export_write_nfo" type="bool" label="32044" default="true" />
+        <setting id="export_get_tmdb" type="bool" subsetting="true"label="32056" default="true" enable="eq(-1,true)"/>
+        <setting id="export_get_fanart" type="bool" subsetting="true"label="32057" default="true" enable="eq(-2,true)"/>
+		<setting id="export_trigger_scan" type="bool" label="32045" default="true" />
+        <setting label="32046" type="action" id="export_remove_all" action="RunScript(script.bluray.com,export_remove_all)"/>
 	</category>
 </settings>

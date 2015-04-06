@@ -165,3 +165,75 @@ msgctxt "#32039"
 msgid "Games"
 msgstr ""
 
+msgctxt "#32040"
+msgid "Export"
+msgstr ""
+
+msgctxt "#32041"
+msgid "Path"
+msgstr ""
+
+msgctxt "#32042"
+msgid "Add 'offline' tag"
+msgstr ""
+
+msgctxt "#32043"
+msgid "Add 'online' tag to existing movies"
+msgstr ""
+
+msgctxt "#32044"
+msgid "Create .nfo file"
+msgstr ""
+
+msgctxt "#32045"
+msgid "Trigger scan when finished"
+msgstr ""
+
+msgctxt "#32046"
+msgid "Remove movies exported by this addon from the database"
+msgstr ""
+
+msgctxt "#32047"
+msgid "Removing..."
+msgstr ""
+
+msgctxt "#32048"
+msgid "Done"
+msgstr ""
+
+msgctxt "#32049"
+msgid "Removied {0} items from the database."
+msgstr ""
+
+msgctxt "#32050"
+msgid "Enter Price"
+msgstr ""
+
+msgctxt "#32051"
+msgid "Exporting..."
+msgstr ""
+
+msgctxt "#32052"
+msgid "Tagging online movies..."
+msgstr ""
+
+msgctxt "#32053"
+msgid "Export of {0} items complete!"
+msgstr ""
+
+msgctxt "#32054"
+msgid "Choose export path"
+msgstr ""
+
+msgctxt "#32055"
+msgid "Format"
+msgstr ""
+
+msgctxt "#32056"
+msgid "Get more info with TMDB"
+msgstr ""
+
+msgctxt "#32057"
+msgid "Download fanart"
+msgstr ""
+
