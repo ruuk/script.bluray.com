@@ -237,3 +237,6 @@ msgctxt "#32057"
 msgid "Download fanart"
 msgstr ""
 
+msgctxt "#32058"
+msgid "Refresh library from export directory"
+msgstr ""

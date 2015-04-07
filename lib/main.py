@@ -1,50 +1,20 @@
-import os, sys, shutil, requests, time, json
-import xbmc, xbmcgui, xbmcaddon, xbmcvfs
+import os, time, json
+import xbmc, xbmcgui, xbmcvfs
 import bluraycomapi
-
-ADDON = xbmcaddon.Addon()
-__version__ = ADDON.getAddonInfo('version')
-T = ADDON.getLocalizedString
-
-CACHE_PATH = os.path.join(xbmc.translatePath(ADDON.getAddonInfo('profile')),'cache')
-LOCAL_STORAGE_PATH = os.path.join(xbmc.translatePath(ADDON.getAddonInfo('profile')),'local')
-
-if not os.path.exists(CACHE_PATH): os.makedirs(CACHE_PATH)
-if not os.path.exists(LOCAL_STORAGE_PATH): os.makedirs(LOCAL_STORAGE_PATH)
+import util
+import export
 
 API = None
+
+__version__ = util.ADDON.getAddonInfo('version')
+
 LAST_SEARCH = ''
 
-def LOG(msg):
-    print 'Blu-ray.com: %s' % msg
-
-def ERROR():
-    import traceback
-    traceback.print_exc()
-
-bluraycomapi.LOG = LOG
+LOG = util.LOG
+bluraycomapi.LOG = util.LOG
+T = util.T
 
 LOG('Version: %s' % __version__)
-
-
-def imageToCache(src,name):
-    response = requests.get(src, stream=True)
-    target = os.path.join(CACHE_PATH,name)
-    with open(target, 'wb') as out_file:
-        shutil.copyfileobj(response.raw, out_file)
-    del response
-    return target
-
-def tryTwice(func,*args,**kwargs):
-    try:
-        return func(*args,**kwargs)
-    except:
-        ERROR()
-    xbmc.sleep(500)
-    try:
-        return func(*args,**kwargs)
-    except:
-        ERROR()
 
 class BaseWindowDialog(xbmcgui.WindowXMLDialog):
     def __init__(self):
@@ -137,38 +107,10 @@ class BluRayReviews(BaseWindowDialog):
         self.reviewList.reset()
         self.showReviews(page=page,category=category,filterChange=filterChange,force=force)
 
-    def getCollectionCategories(self,category=None):
-        if category is not None:
-            default = category
-        else:
-            default = getSetting('default_collection',0)
-            if default > 2:
-                default = API.categories[default-3][0]
-            else:
-                default = 0 - default
-            self.lastCategory = default
-        if default == 0:
-            cats = []
-            for ID,cat in API.categories:  # @UnusedVariable
-                if getSetting('all_cat_%d' % ID,False): cats.append(ID)
-            return cats
-        elif default == -1:
-            cats = []
-            for ID,cat in API.categories:  # @UnusedVariable
-                if getSetting('movies_cat_%d' % ID,False): cats.append(ID)
-            return cats
-        elif default == -2:
-            cats = []
-            for ID,cat in API.categories:  # @UnusedVariable
-                if getSetting('games_cat_%d' % ID,False): cats.append(ID)
-            return cats
-        else:
-            return [default]
-
     def getCollectionCategoriesToShow(self):
         cats = []
         for ID,cat in API.categories:
-            if getSetting('used_cat_%d' % ID,False): cats.append((ID,cat))
+            if util.getSetting('used_cat_%d' % ID,False): cats.append((ID,cat))
         return cats
 
     def showReviews(self,page=0,category=None,filterChange=False,force=False):
@@ -204,7 +146,7 @@ class BluRayReviews(BaseWindowDialog):
                     results = self.currentResults
                 else:
                     try:
-                        results = API.getCollection(categories=self.getCollectionCategories(category),force_refresh=force)
+                        results = API.getCollection(categories=util.getCollectionCategories(category,self),force_refresh=force)
                     except bluraycomapi.LoginError, e:
                         error = 'Unknown'
                         if e.error == 'userpass': error = 'Bad Blu-ray.com name or password.'
@@ -374,7 +316,10 @@ class BluRayReviews(BaseWindowDialog):
             m.addItem(cat_id,cat)
         m.addSep()
         m.addItem('refresh','[B]Update Collection[/B]')
-        m.addItem('export','[B]Export[/B]')
+        if export.exporting():
+            m.addItem('export_cancel','[COLOR FFFF9999][B]Cancel Export[/B][/COLOR]')
+        else:
+            m.addItem('export','[B]Export[/B]')
         m.setAutoSelectID(self.lastCategory)
         ID = m.getResult()
         if ID is None: return
@@ -383,13 +328,15 @@ class BluRayReviews(BaseWindowDialog):
             d = xbmcgui.DialogProgress()
             d.create('Updating...','Getting collection data...')
             try:
-                cats = self.getCollectionCategories(0)
+                cats = util.getCollectionCategories(0,self)
                 API.refreshCollection(cats,callback=d.update)
             finally:
                 d.close()
             self.refresh(category=self.lastCategory)
         elif ID == 'export':
-            self.export()
+            export.exportBG(self.lastCategory)
+        elif ID == 'export_cancel':
+            export.cancel()
         else:
             self.refresh(category=ID)
 
@@ -569,175 +516,6 @@ class BluRayReviews(BaseWindowDialog):
         finally:
             BaseWindowDialog.onAction(self,action)
 
-    def export(self):
-        nfo = u'''<movie>
-    <title>{title}</title>
-    <sorttitle>{sort}</sorttitle>
-    <rating>{rating}</rating>
-    <runtime>{runtime}</runtime>
-    <year>{year}</year>
-    <thumb>{thumb}</thumb>
-    <fanart>{fanart}</fanart>
-    <playcount>{watched}</playcount>
-    <filenameandpath>{path}</filenameandpath>
-    <credits></credits>
-    <art>
-        <fanart>{fanart}</fanart>
-        <poster>{thumb}</poster>
-    </art>
-    <fileinfo>
-        <streamdetails>
-        </streamdetails>
-    </fileinfo>
-    {collection}
-    {genres}
-{actors}
-    {tags}
-</movie>'''
-
-        tag = u'<tag>{0}</tag>'
-        genre = u'<genre>{0}</genre>'
-        actor = u'    <actor><name>{name}</name><role>{role}</role><thumb>{thumb}</thumb></actor>\n'
-        set_ = u'<set>{0}</set>'
-
-        path = getSetting('export_path')
-        if not path or not xbmcvfs.exists(path):
-            path = xbmcgui.Dialog().browse(3,T(32054),'files')
-            if not path: return
-            ADDON.setSetting('export_path',path)
-        sep = u'/'
-        if '\\' in path: sep = u'\\'
-        video = os.path.join(xbmc.translatePath(ADDON.getAddonInfo('path')).decode('utf-8'),'resources','video.mp4')
-        baseTags = tag.format('blu-ray.com')
-        if getSetting('export_offline_tag',True):
-            baseTags += tag.format('offline')
-
-        genreTable = {}
-        for g in API.genres: genreTable[g[2]] = g[1]
-
-        total = float(len(self.currentResults))
-        progress = xbmcgui.DialogProgress()
-        progress.create(T(32051))
-
-        import tmdbsimple as tmdb
-        tmdb.API_KEY = '99ccac3e0d7fd2c7a076beea141c1057'
-        config = tmdb.Configuration()
-        config.info()
-        tmdbBaseImageURL = config.images['base_url'] + u'original{0}'
-        try:
-            for idx,r in enumerate(self.currentResults):
-                progress.update(int((idx/total)*100),r.title,' ',' ')
-                if progress.iscanceled(): return
-
-                searchTitle = r.title.replace('3D','').strip()
-                if r.uniqueMovies:
-                    searchTitle = searchTitle.split('/')[0].strip()
-
-
-                cleanTitle = cleanFilename(r.title)
-
-                #Write .strm file
-                f = xbmcvfs.File(path+sep+u'{0}.strm'.format(cleanTitle),'w')
-                f.write(video.encode('utf-8'))
-                f.close()
-
-                #Write .nfo file
-                if getSetting('export_write_nfo',True):
-                    tags = baseTags
-                    if r.is3D: tags += tag.format('3D')
-
-                    genres = ''
-                    for i in r.genreIDs:
-                        if i in genreTable:
-                            genres += genre.format(genreTable[i])
-
-                    fanart = ''
-                    actors = ''
-                    collection = ''
-
-                    if getSetting('export_get_tmdb',True):
-                        progress.update(int((idx/total)*100),r.title,u'TMDB: {0}...'.format(searchTitle))
-                        search = tmdb.Search()
-                        tryTwice(search.movie,query=searchTitle,year=r.year)
-                        if search.results:
-                            movie = tmdb.Movies(search.results[0]['id'])
-                            tryTwice(movie.info,append_to_response='credits')
-                            fanart = movie.backdrop_path and tmdbBaseImageURL.format(movie.backdrop_path) or ''
-                            if movie.belongs_to_collection:
-                                collection = set_.format(movie.belongs_to_collection['name'])
-                                if r.uniqueMovies:
-                                    bd = movie.belongs_to_collection['backdrop_path']
-                                    fanart = bd and tmdbBaseImageURL.format(bd) or fanart
-                            for c in movie.credits.get('cast',[]):
-                                actors += actor.format(name=c['name'],role=c['character'],thumb=tmdbBaseImageURL.format(c['profile_path']))
-
-                    f = xbmcvfs.File(path+sep+u'{0}.nfo'.format(cleanTitle),'w')
-                    f.write(
-                        nfo.format(
-                            title=r.title,
-                            sort=r.sortTitle or r.title,
-                            rating=r.rating.split(' ',1)[-1],
-                            #plot=r.description or r.info,
-                            path=video,
-                            runtime=r.runtime,
-                            year=r.year,
-                            thumb=r.icon.replace('_medium.','_front.'),
-                            fanart=fanart,
-                            watched=r.watched and '0' or '',
-                            collection=collection,
-                            genres=genres,
-                            actors=actors,
-                            tags=tags
-                        ).encode('utf-8')
-                    )
-                    f.close()
-
-                fanartOutPath = path+sep+u'{0}-fanart.jpg'.format(cleanTitle)
-                if getSetting('export_get_fanart',True) and fanart and not xbmcvfs.exists(fanartOutPath):
-                    progress.update(int((idx/total)*100),r.title,u'TMDB: {0}'.format(searchTitle),u'Getting fanart...')
-                    f = xbmcvfs.File(fanartOutPath,'w')
-                    try:
-                        r = requests.get(fanart, stream=True)
-                        if r.status_code == 200:
-                            for chunk in r.iter_content(1024):
-                                f.write(chunk)
-                    finally:
-                        f.close()
-
-            #Tag existing movies online
-            if getSetting('export_offline_tag',True) and getSetting('export_online_tag',True):
-                progress.update(100,T(32052))
-                response = xbmc.executeJSONRPC('{"jsonrpc": "2.0", "method": "VideoLibrary.GetMovies", "params": {"properties":["tag"]}, "id": 1}')
-                try:
-                    data = json.loads(response)
-                    if 'result' in data and 'movies' in data['result']:
-                        for i in data['result']['movies']:
-                            tags = i['tag']
-                            if not 'offline' in tags and not 'online' in tags:
-                                tags.append('online')
-                                xbmc.executeJSONRPC('{"jsonrpc": "2.0", "method": "VideoLibrary.SetMovieDetails", "params":{"movieid":%s,"tag":%s},"id": 1}' % (i['movieid'],json.dumps(tags)))
-                except:
-                    ERROR()
-        finally:
-            progress.close()
-
-        #Trigger library scan of export path
-        if getSetting('export_trigger_scan',True):
-            xbmc.executeJSONRPC('{"jsonrpc": "2.0", "method": "VideoLibrary.Scan", "params": {"directory":"%s"}, "id": 1}' % path)
-
-        xbmcgui.Dialog().ok(T(32048),'',T(32053).format(int(total)))
-
-def cleanFilename(filename):
-    import string
-    import unidecode
-    try:
-        filename = unidecode.unidecode(filename).decode('utf8')
-    except:
-        LOG('Failed to convert chars in filename: {0}'.format(repr(filename)))
-    filename = filename.replace(': ',' - ').strip()
-    valid_chars = "-_.() %s%s" % (string.ascii_letters, string.digits)
-    return ''.join(c if c in valid_chars else '_' for c in filename)
-
 class BluRayReview(BaseWindowDialog):
     def __init__(self,*args,**kwargs):
         BaseWindowDialog.__init__(self)
@@ -797,7 +575,7 @@ class BluRayReview(BaseWindowDialog):
                 items.append(item)
             ct = 0
             for source, url in review.historyGraphs:  # @UnusedVariable
-                url = imageToCache(url,'graph%s.png' % ct)
+                url = util.imageToCache(url,'graph%s.png' % ct)
                 item = xbmcgui.ListItem(iconImage=url)
                 item.setProperty('1080p',url)
                 items.append(item)
@@ -886,8 +664,8 @@ class BluRaySearch(BaseWindowDialog):
 
     def fillSearch(self):
         if LAST_SEARCH: self.keywordsButton.setLabel(LAST_SEARCH)
-        lastSection = getSetting('search_last_section','')
-        lastCountry = getSetting('search_last_country','')
+        lastSection = util.getSetting('search_last_section','')
+        lastCountry = util.getSetting('search_last_country','')
         sectionIDX = 0
         countryIDX = 0
 
@@ -931,8 +709,8 @@ class BluRaySearch(BaseWindowDialog):
         self.section = self.sectionList.getSelectedItem().getProperty('sectionid')
         self.country = self.countryList.getSelectedItem().getProperty('country')
         if self.keywords: LAST_SEARCH = self.keywords
-        ADDON.setSetting('search_last_section',self.section)
-        ADDON.setSetting('search_last_country',self.country)
+        util.ADDON.setSetting('search_last_section',self.section)
+        util.ADDON.setSetting('search_last_country',self.country)
 
     def onClick(self,controlID):
         if controlID == 102:
@@ -958,9 +736,9 @@ class BluRayFilter(BaseWindowDialog):
         self.genre3 = ''
         self.time = ''
         self.watched = None
-        self.genre1Exclude = getSetting('filter_last_excludegenre1',False)
-        self.genre2Exclude = getSetting('filter_last_excludegenre2',False)
-        self.genre3Exclude = getSetting('filter_last_excludegenre3',False)
+        self.genre1Exclude = util.getSetting('filter_last_excludegenre1',False)
+        self.genre2Exclude = util.getSetting('filter_last_excludegenre2',False)
+        self.genre3Exclude = util.getSetting('filter_last_excludegenre3',False)
         BaseWindowDialog.__init__(self)
 
     def onInit(self):
@@ -979,12 +757,12 @@ class BluRayFilter(BaseWindowDialog):
         self.setProperty('excludegenre2',self.genre2Exclude and '1' or '')
         self.setProperty('excludegenre3',self.genre3Exclude and '1' or '')
 
-        lastLetter = getSetting('filter_last_letter','')
-        lastGenre1 = getSetting('filter_last_genre1','')
-        lastGenre2 = getSetting('filter_last_genre2','')
-        lastGenre3 = getSetting('filter_last_genre3','')
-        lastTime = getSetting('filter_last_time',0)
-        lastWatched = getSetting('filter_last_watched','')
+        lastLetter = util.getSetting('filter_last_letter','')
+        lastGenre1 = util.getSetting('filter_last_genre1','')
+        lastGenre2 = util.getSetting('filter_last_genre2','')
+        lastGenre3 = util.getSetting('filter_last_genre3','')
+        lastTime = util.getSetting('filter_last_time',0)
+        lastWatched = util.getSetting('filter_last_watched','')
         letterIDX = 0
         genre1IDX = 0
         genre2IDX = 0
@@ -1077,15 +855,15 @@ class BluRayFilter(BaseWindowDialog):
             self.watched = None
         else:
             self.watched = watched == '1'
-        ADDON.setSetting('filter_last_letter',self.letter)
-        ADDON.setSetting('filter_last_genre1',self.genre1)
-        ADDON.setSetting('filter_last_genre2',self.genre2)
-        ADDON.setSetting('filter_last_genre3',self.genre3)
-        ADDON.setSetting('filter_last_time',str(self.time))
-        ADDON.setSetting('filter_last_watched',watched)
-        ADDON.setSetting('filter_last_excludegenre1',str(self.genre1Exclude).lower())
-        ADDON.setSetting('filter_last_excludegenre2',str(self.genre2Exclude).lower())
-        ADDON.setSetting('filter_last_excludegenre3',str(self.genre3Exclude).lower())
+        util.ADDON.setSetting('filter_last_letter',self.letter)
+        util.ADDON.setSetting('filter_last_genre1',self.genre1)
+        util.ADDON.setSetting('filter_last_genre2',self.genre2)
+        util.ADDON.setSetting('filter_last_genre3',self.genre3)
+        util.ADDON.setSetting('filter_last_time',str(self.time))
+        util.ADDON.setSetting('filter_last_watched',watched)
+        util.ADDON.setSetting('filter_last_excludegenre1',str(self.genre1Exclude).lower())
+        util.ADDON.setSetting('filter_last_excludegenre2',str(self.genre2Exclude).lower())
+        util.ADDON.setSetting('filter_last_excludegenre3',str(self.genre3Exclude).lower())
 
     def onClick(self,controlID):
         if controlID == 103:
@@ -1264,26 +1042,6 @@ def trackPrice(product_id,update_id=None,price='19.99'):
     expiration = '8'
     return API.trackPrice(product_id, price, price_range, expiration,update_id)
 
-def getSetting(key,default=None):
-    setting = ADDON.getSetting(key)
-    return _processSetting(setting,default)
-
-def _processSetting(setting,default):
-    if not setting: return default
-    if isinstance(default,bool):
-        return setting.lower() == 'true'
-    elif isinstance(default,int):
-        return int(float(setting or 0))
-    elif isinstance(default,list):
-        if setting: return setting.split(':!,!:')
-        else: return default
-
-    return setting
-
-def updateUserPass():
-    API.user = ADDON.getSetting('user') or None
-    API.md5password = ADDON.getSetting('pass') or None
-
 def getPassword():
     key = xbmc.Keyboard('',T(32026),True)
     key.doModal()
@@ -1292,7 +1050,7 @@ def getPassword():
     if not password: return
     del key
     import hashlib
-    ADDON.setSetting('pass',hashlib.md5(password).hexdigest())
+    util.ADDON.setSetting('pass',hashlib.md5(password).hexdigest())
 
 def removeExported():
     progress = xbmcgui.DialogProgress()
@@ -1308,15 +1066,36 @@ def removeExported():
                 if progress.iscanceled(): break
                 progress.update(int((idx/total)*100),i['label'])
                 tags = i['tag']
+                remove = False
                 if 'blu-ray.com' in tags or 'script.bluray.com' in i['file']:
+                    remove = True
+                elif i['file'].endswith('.strm'):
+                    try:
+                        f = xbmcvfs.File(i['file'],'r')
+                        try:
+                            path = f.read()
+                        finally:
+                            f.close()
+
+                        if 'script.bluray.com' in path:
+                            remove = True
+                    except:
+                        pass
+
+                if remove:
                     removed+=1
                     xbmc.executeJSONRPC('{"jsonrpc": "2.0", "method": "VideoLibrary.RemoveMovie", "params":{"movieid":%s},"id": 1}' % i['movieid'])
         except:
             total = 0
-            ERROR()
+            util.ERROR()
     finally:
         progress.close()
     xbmcgui.Dialog().ok(T(32048),'',T(32049).format(removed))
+
+def refreshExported():
+    path = util.getSetting('export_path')
+    if not path: return
+    xbmc.executeJSONRPC('{"jsonrpc": "2.0", "method": "VideoLibrary.Scan", "params": {"directory":"%s"}, "id": 1}' % path)
 
 def setGlobalSkinProperty(key,value=''):
     xbmcgui.Window(10000).setProperty('script.bluray.com-%s' % key,value)
@@ -1328,15 +1107,15 @@ def openReviewsWindow(mode=None):
 
 def openWindow(window_class,xml_file,return_window=False,replaces=None,**kwargs):
     if replaces:
-        src = os.path.join(xbmc.translatePath(ADDON.getAddonInfo('path')),'resources','skins','Main','1080i',xml_file)
+        src = os.path.join(xbmc.translatePath(util.ADDON.getAddonInfo('path')),'resources','skins','Main','1080i',xml_file)
         xml_file = 'bluray-com-modified.xml'
-        dest = os.path.join(xbmc.translatePath(ADDON.getAddonInfo('path')),'resources','skins','Main','1080i',xml_file)
+        dest = os.path.join(xbmc.translatePath(util.ADDON.getAddonInfo('path')),'resources','skins','Main','1080i',xml_file)
         with open(src,'r') as f: xml = f.read()
         for r,val in replaces:
             xml = xml.replace(r,val)
         with open(dest,'w') as f: f.write(xml)
 
-    w = window_class(xml_file , xbmc.translatePath(ADDON.getAddonInfo('path')), 'Main',**kwargs)
+    w = window_class(xml_file , xbmc.translatePath(util.ADDON.getAddonInfo('path')), 'Main',**kwargs)
     w.doModal()
     if return_window:
         return w
@@ -1345,6 +1124,7 @@ def openWindow(window_class,xml_file,return_window=False,replaces=None,**kwargs)
 
 def main():
     global API
+    API = util.initAPI()
     bluraycomapi.TR.update({    'reviews':T(32001),
                                 'releases':T(32002),
                                 'deals':T(32003),
@@ -1353,16 +1133,6 @@ def main():
                                 'watched':T(32011),
                                 'yes':T(32012)
                             })
-    API = bluraycomapi.BlurayComAPI(LOCAL_STORAGE_PATH)
-    API.setDefaultCountryByIndex(getSetting('default_country',0))
-    LOG('Default country: %s' % str(API.defaultCountry).upper())
-    updateUserPass()
+
     openWindow(BluRayCategories,'bluray-com-categories.xml')
 
-if __name__ == '__main__':
-    if sys.argv[-1] == 'get_password':
-        getPassword()
-    elif sys.argv[-1] == 'export_remove_all':
-        removeExported()
-    else:
-        main()

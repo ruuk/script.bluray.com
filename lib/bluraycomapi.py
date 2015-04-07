@@ -1,10 +1,12 @@
 import sys, time, threadpool
 if sys.version < '2.7.3': #If crappy html.parser, use internal version. Using internal version on ATV2 crashes as of XBMC 12.2, so that's why we test version
     print 'Blu-ray.com: Using internal HTMLParser'
-    import HTMLParser # @UnusedImport
-import html5lib # @UnusedImport
+    import HTMLParser #@analysis:ignore
+import html5lib #@analysis:ignore
 import re, bs4, urllib, os, datetime # @UnresolvedImport
 import requests
+
+PARSER = None
 
 def LOG(msg):
     print msg
@@ -34,6 +36,22 @@ def getGenreByID(ID):
     for name, label, gid in BlurayComAPI.genres:  # @UnusedVariable
         if gid == ID: return label
     return ''
+
+def getSoup(text):
+    global PARSER
+    if not PARSER:
+        try:
+            soup = bs4.BeautifulSoup(text, 'html5lib')
+            PARSER = 'html5lib'
+            LOG('Using: html5lib parser')
+            return soup
+        except:
+            import traceback
+            traceback.print_exc()
+            pass
+        PARSER = 'html.parser'
+        LOG('Using: html.parser parser')
+    return bs4.BeautifulSoup(text, PARSER)
 
 class LoginError(Exception):
     def __init__(self,name,msg,code=0):
@@ -301,6 +319,7 @@ class CollectionResult(ReviewsResult):
         self.originalURL = ''
         self.watched = False
         self.dateWatched = 0
+        self._titles = None
         self.json = {}
 
     '''
@@ -348,8 +367,10 @@ class CollectionResult(ReviewsResult):
         self.genreIDs = json.get('genreids','').split(',')
         self.is3D = json.get('3d',0)
         self.uniqueMovies = json.get('uniquemovies')
+        self.edition = json.get('edition')
         try:
             self.year = str(json.get('year') or datetime.datetime.fromtimestamp(json.get('releasetimestamp')).year)
+            if '-' in self.year: self.year = ''
         except:
             self.year = ''
 
@@ -392,6 +413,23 @@ class CollectionResult(ReviewsResult):
 
         self.description += json.get('comment','')
         self.genre = ''
+
+    @property
+    def titles(self):
+        if not self._titles:
+            if self.uniqueMovies:
+                if self.edition and '/' in self.edition:
+                    base = self.edition
+                elif '/' in self.title:
+                    base = self.title
+                else:
+                    base = re.sub('(?i)trilogy|collection|quadrilogy','',self.title)
+
+                self._titles = [t.strip() for t in base.split('|',1)[-1].split('/')]
+            else:
+                self._titles = [self.title]
+
+        return self._titles
 
     def refresh(self):
         self.processSoupData(self.json)
@@ -820,7 +858,7 @@ def getIMDBVideoIDs(url):
     #'http://www.imdb.com/video/imdb/vi2165155865/imdbvideo?format=720p'
     try:
         headers = {'User-Agent':'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1312.57 Safari/537.17'}
-        soup = bs4.BeautifulSoup(requests.get(url,headers=headers).text)
+        soup = getSoup(requests.get(url,headers=headers).text)
         try:
             defImage = soup.find('meta',{'property':'og:image'}).get('content','')
         except:
@@ -1091,7 +1129,6 @@ class BlurayComAPI:
     siteEncoding = 'iso-8859-2'
 
     def __init__(self,local_storage_path,auto_refresh_interval=86400):
-        self.parser = None
         self.sessionID = ''
         self.user = None
         self.md5password = None
@@ -1117,23 +1154,7 @@ class BlurayComAPI:
     def url2Soup(self,url):
         req = self.session().get(url)
         req.encoding = self.siteEncoding
-        return self.getSoup(req.text)
-
-    def getSoup(self,text):
-#        try:
-#            soup = bs4.BeautifulSoup(text, 'lxml', from_encoding=self.siteEncoding)
-#            LOG('Using: lxml parser')
-#            return soup
-#        except:
-#            pass
-        try:
-            soup = bs4.BeautifulSoup(text, 'html5lib', from_encoding=self.siteEncoding)
-            LOG('Using: html5lib parser')
-            return soup
-        except:
-            pass
-        LOG('Using: html.parser parser')
-        return bs4.BeautifulSoup(text, self.parser, from_encoding=self.siteEncoding)
+        return getSoup(req.text)
 
     def getCategoryNameByID(self,catID):
         catID = str(catID)
@@ -1223,7 +1244,7 @@ class BlurayComAPI:
         fixed = re.sub('<i>(?i)','[I]',fixed)
         fixed = re.sub('</i>(?i)',' [/I]',fixed)
         #fixed = re.sub('<br[^>]*?>(?i)','[CR]',fixed)
-        return bs4.BeautifulSoup(fixed,self.parser,from_encoding=self.siteEncoding)
+        return getSoup(fixed)
 
     def _getReviewData(self,data):
         req = self.session().get(data['url'])
@@ -1322,7 +1343,7 @@ class BlurayComAPI:
             url = self.siteSearchURL.format(platform=self.siteSearchPlatforms.get(str(section)))
             req = requests.post(url,data={'general_model':terms,'action':'search','c':section,'searchsubmit':'Search'},headers={'Referer':url})
             results = []
-            soup = self.getSoup(req.text)
+            soup = getSoup(req.text)
             idx=0
             for table in soup.find('form',{'id':'compareform'}).findAll('table',recursive=False):
                 ssr = SiteSearchResult(section).start(table)

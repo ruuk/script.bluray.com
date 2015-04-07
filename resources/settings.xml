@@ -59,5 +59,6 @@
         <setting id="export_get_fanart" type="bool" subsetting="true"label="32057" default="true" enable="eq(-2,true)"/>
 		<setting id="export_trigger_scan" type="bool" label="32045" default="true" />
         <setting label="32046" type="action" id="export_remove_all" action="RunScript(script.bluray.com,export_remove_all)"/>
+        <setting label="32058" type="action" id="export_refresh" action="RunScript(script.bluray.com,export_refresh)"/>
 	</category>
 </settings>
